@@ -13,7 +13,7 @@ from std_srvs.srv import SetBool, SetBoolResponse
 from robot import Robot
 from ohm_mecanum_sim.srv import Spawn, SpawnRequest, SpawnResponse
 
-class Ohm_Mecanum_Sim:
+class Ohm_Mecanum_Simulator:
 
     def __init__(self, surface, rosname, windowtitle):
         self._surface = surface
