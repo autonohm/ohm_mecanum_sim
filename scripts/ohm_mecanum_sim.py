@@ -11,7 +11,7 @@ import pygame
 import sys
 from std_srvs.srv import SetBool, SetBoolResponse
 from robot import Robot
-from ohm_mecanum_simulator.srv import Spawn, SpawnRequest, SpawnResponse
+from ohm_mecanum_sim.srv import Spawn, SpawnRequest, SpawnResponse
 
 class Ohm_Mecanum_Sim:
 

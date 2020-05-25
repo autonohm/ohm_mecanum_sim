@@ -18,7 +18,7 @@ size = width, height = 1600, 900
 # Drawing surface
 surface = pygame.display.set_mode(size, pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-sim = Ohm_Mecanum_Sim(surface, "ohm_mechnum_sim", "Ohm Mecanum Simulator")
+sim = Ohm_Mecanum_Sim(surface, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
 
 sim.spawn_robot(2, 2, 0, "robot1")
 sim.spawn_robot(5, 7, 0, "robot2")

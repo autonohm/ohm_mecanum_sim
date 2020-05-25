@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ohm_mecanum_simulator)
+project(ohm_mecanum_sim)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -103,7 +103,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ohm_mecanum_simulator
+#  LIBRARIES ohm_mecanum_sim
 #  CATKIN_DEPENDS geometry_msgs rospy sensor_msgs
   CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
@@ -122,7 +122,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ohm_mecanum_simulator.cpp
+#   src/${PROJECT_NAME}/ohm_mecanum_sim.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -133,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/ohm_mecanum_simulator_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/ohm_mecanum_sim_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -160,7 +160,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  scripts/ohm_mecanum_simulator_node.py
+  scripts/ohm_mecanum_sim_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -197,7 +197,7 @@ install(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ohm_mecanum_simulator.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ohm_mecanum_sim.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
