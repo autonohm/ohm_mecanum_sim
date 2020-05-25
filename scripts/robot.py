@@ -87,6 +87,7 @@ class Robot:
         self._thread            = threading.Timer(0.1, self.trigger)
         self._thread.start()
         self._timestamp         = time.process_time()
+        self._last_command      = time.process_time()
 
     def __del__(self):
         self.stop()
@@ -111,6 +112,13 @@ class Robot:
             timestamp = time.process_time()
             elapsed = timestamp - self._timestamp
             self._timestamp = timestamp
+
+            # Check, whether commands arrived recently
+            last_command_arrival = timestamp - self._last_command
+            if last_command_arrival > 0.5:
+                self._v[0] = 0
+                self._v[1] = 0
+                self._omega = 0
 
             # Change orientation
             self._theta += self._omega * elapsed
@@ -249,9 +257,11 @@ class Robot:
 
     def callback_twist(self, data):
         self.set_velocity(data.linear.x, data.linear.y, data.angular.z)
+        self._last_command = time.process_time()
 
     def callback_joy(self, data):
         self.set_velocity(data.axes[1]*self._max_speed, data.axes[0]*self._max_speed, data.axes[2]*self._max_omega)
+        self._last_command = time.process_time()
 
     def line_length(self, p1, p2):
         return sqrt( (p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]) )
