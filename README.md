@@ -3,15 +3,18 @@ This package comprises a pygame-based robot simulation for mecanum-driven kinema
 
 ## Prerequisites on Ubuntu 18.4
 Installing python3 aside python2 can be done with pip:
-$ sudo apt install python3 python-pip python3-pip python-catkin-tools python3-catkin-tools
-$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
-$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
-$ pip install -U defusedxml rospkg pygame pycryptodomex gnupg
-
+```console
+user@machine:~$ sudo apt install python3 python-pip python3-pip python-catkin-tools python3-catkin-tools
+user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
+user@machine:~$ pip install -U defusedxml rospkg pygame pycryptodomex gnupg
+```
 ## Starting the simulator
-Go to your catkin workspace and execute ...
-$ roscore &
-$ source devel/setup.bash
-$ python3 src/ohm_mecanum_simulator/scripts/ohm_mecanum_simulator_node.py
-
+Go to your catkin workspace / execute the following commands (replace the path to your catkin workspace accordingly):
+```console
+user@machine:~$ roscore &
+user@machine:~$ cd workspace/catkin_ws
+user@machine:~/workspace/catkin_ws$ source devel/setup.bash
+user@machine:~/workspace/catkin_ws$ python3 src/ohm_mecanum_simulator/scripts/ohm_mecanum_simulator_node.py
+```
 
