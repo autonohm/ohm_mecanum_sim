@@ -5,7 +5,7 @@ This package comprises a pygame-based robot simulation for mecanum-driven kinema
 
 Tests have been performed with ROS melodic, albeit the used python versions differ. While ROS melodic uses python2.x, the simulator need python3. The  reason is, that ROS noetic will require python3. In order to make the simulator work with ROS melodic, you can follow the installation hints below.
 
-## Prerequisites on Ubuntu 18.4
+## Prerequisites on Ubuntu 18.04
 Installing python3 aside python2 can be done with pip:
 ```console
 user@machine:~$ sudo apt install python3 python-pip python3-pip python-catkin-tools
