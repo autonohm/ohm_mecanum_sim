@@ -1,7 +1,7 @@
 # ohm_mecanum_sim
 This package comprises a pygame-based robot simulation for mecanum-driven kinematic concepts.
 
-![](images/screenshot 1-1.png?raw=true)
+![Screenshot of Robot Simulator](/images/screenshot.png)
 
 Tests have been performed with ROS melodic, albeit the used python versions differ. While ROS melodic uses python2.x, the simulator need python3. The  reason is, that ROS noetic will require python3. In order to make the simulator work with ROS melodic, you can follow the installation hints below.
 
