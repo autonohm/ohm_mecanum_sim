@@ -21,7 +21,7 @@ surface = pygame.display.set_mode(size, pygame.HWSURFACE | pygame.DOUBLEBUF)
 sim = Ohm_Mecanum_Simulator(surface, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
 
 sim.spawn_robot(2, 2, 0, "robot1")
-sim.spawn_robot(5, 7, 0, "robot2")
+# sim.spawn_robot(5, 7, 0, "robot2")
 
 border = 5
 sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
