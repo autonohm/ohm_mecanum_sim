@@ -4,7 +4,7 @@ This package comprises a pygame-based robot simulation for mecanum-driven kinema
 ## Prerequisites on Ubuntu 18.4
 Installing python3 aside python2 can be done with pip:
 ```console
-user@machine:~$ sudo apt install python3 python-pip python3-pip python-catkin-tools python3-catkin-tools
+user@machine:~$ sudo apt install python3 python-pip python3-pip python-catkin-tools
 user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
 user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
 user@machine:~$ pip install -U defusedxml rospkg pygame pycryptodomex gnupg
