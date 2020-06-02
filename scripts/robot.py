@@ -9,10 +9,12 @@ import pygame
 import rospy
 import time, threading
 import operator
+import numpy as np
 from math import cos, sin, pi, sqrt
 from geometry_msgs.msg import Pose, Twist
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32MultiArray
+from ohm_mecanum_sim.msg import WheelSpeed
 
 class Robot:
 
@@ -43,16 +45,22 @@ class Robot:
     # Range of ToF sensors
     _rng_tof            = 4.0
 
-    # Maximum linear speed in m/s
-    _max_speed          = 2.0
+    # Radius of wheels
+    _wheel_radius       = 0.05
 
-    # Maximum angular speed in rad/s
-    _max_omega          = 1.0
+    # Maximum angular rate of wheels in rad/s
+    _wheel_omega_max    = 10
+
+    # Center distance between front and rear wheels
+    _wheel_base         = 0.3
+
+    # Distance between left and right wheels
+    _track              = 0.2
 
     # Zoomfactor of image representation
     _zoomfactor         = 1.0
 
-    # Animation counter, this variable is used to switch image representation to prevent a driving robot
+    # Animation counter, this variable is used to switch image representation to pretend a driving robot
     _animation_cnt      = 0
 
     def __init__(self, x, y, theta, name):
@@ -61,6 +69,23 @@ class Robot:
         self._reset = False
         self._coords = [x, y]
         self._theta = theta
+
+        # Matrix of kinematic concept
+        lxly = (self._wheel_base/2 + self._track/2) / self._wheel_radius
+        rinv = 1/self._wheel_radius
+        self._T = np.matrix([[rinv, -rinv, -lxly],
+                            [-rinv, -rinv, -lxly],
+                            [ rinv,  rinv, -lxly],
+                            [-rinv,  rinv, -lxly]])
+        # Inverse of matrix is used for setting individual wheel speeds
+        self._Tinv = np.linalg.pinv(self._T)
+
+        # Calculate maximum linear speed in m/s
+        self._max_speed = self._wheel_omega_max * self._wheel_radius
+
+        # Calculate maximum angular rate of robot in rad/s
+        self._max_omega = self._max_speed / (self._wheel_base/2 + self._track/2)
+
         for i in range(0, len(self._phi_tof)):
             self._v_face.append((0,0))
             self._pos_tof.append((0,0))
@@ -80,6 +105,7 @@ class Robot:
         self._robotrect.center  = self._coords
         self._sub_twist         = rospy.Subscriber(str(self._name)+"/cmd_vel", Twist, self.callback_twist)
         self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
+        self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
         self._pub               = rospy.Publisher(str(self._name)+"/pose", Pose, queue_size=1)
         self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
 
@@ -87,7 +113,7 @@ class Robot:
         self._thread            = threading.Timer(0.1, self.trigger)
         self._thread.start()
         self._timestamp         = time.process_time()
-        self._last_command      = time.process_time()
+        self._last_command      = self._timestamp
 
     def __del__(self):
         self.stop()
@@ -98,7 +124,14 @@ class Robot:
     def set_max_velocity(self, vel):
         self._max_speed = vel
 
+    def set_wheel_speed(self, omega_wheel):
+        w = np.array([omega_wheel[0], omega_wheel[1], omega_wheel[2], omega_wheel[3]])
+        res = self._Tinv.dot(w)
+        self.set_velocity(res[0,0], res[0,1], res[0,2])
+
     def set_velocity(self, vx, vy, omega):
+        x = np.array([vx, vy, omega])
+        omega_i = self._T.dot(x)
         self._v = [vx, vy]
         self._omega = omega
 
@@ -261,6 +294,11 @@ class Robot:
 
     def callback_joy(self, data):
         self.set_velocity(data.axes[1]*self._max_speed, data.axes[0]*self._max_speed, data.axes[2]*self._max_omega)
+        self._last_command = time.process_time()
+
+    def callback_wheel_speed(self, data):
+        omega = [data.w_front_left, data.w_front_right, data.w_rear_left, data.w_rear_right]
+        self.set_wheel_speed(omega);
         self._last_command = time.process_time()
 
     def line_length(self, p1, p2):

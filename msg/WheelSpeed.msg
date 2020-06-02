@@ -1,0 +1,4 @@
+float64 w_front_left
+float64 w_front_right
+float64 w_rear_left
+float64 w_rear_right
