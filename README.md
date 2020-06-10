@@ -11,7 +11,7 @@ Installing python3 aside python2 can be done with pip:
 user@machine:~$ sudo apt install python3 python-pip python3-pip python-catkin-tools
 user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
 user@machine:~$ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
-user@machine:~$ pip install -U defusedxml rospkg pygame pycryptodomex gnupg pyside2 pydot
+user@machine:~$ pip install -U defusedxml rospkg pygame pycryptodomex gnupg pyside2 pydot numpy
 ```
 ## Starting the simulator
 Go to your catkin workspace / execute the following commands (replace the path to your catkin workspace accordingly):
