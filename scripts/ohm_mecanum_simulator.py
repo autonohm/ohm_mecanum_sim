@@ -149,6 +149,8 @@ class Ohm_Mecanum_Simulator:
 
                 if(min_dist<0.2):
                     r.reset_pose()
+                elif (r._coords[0] < 0 or r._coords[1] < 0 or r._coords[0] > self._surface.get_width()/self._meter_to_pixel or r._coords[1] > self._surface.get_height()/self._meter_to_pixel):
+                    r.reset_pose()
 
                 # Draw ToF beams
                 pos_hitpoint = r.get_hit_tof(dist_to_obstacles)
