@@ -9,6 +9,7 @@ project(ohm_mecanum_sim)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  std_msgs
   geometry_msgs
   sensor_msgs
   message_generation
@@ -57,6 +58,7 @@ add_message_files(
 add_service_files(
   FILES
   Spawn.srv
+  Kill.srv
 )
 
 ## Generate actions in the 'action' folder

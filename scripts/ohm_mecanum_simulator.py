@@ -11,7 +11,8 @@ import pygame
 import sys
 from std_srvs.srv import SetBool, SetBoolResponse
 from robot import Robot
-from ohm_mecanum_sim.srv import Spawn, SpawnRequest, SpawnResponse
+from ohm_mecanum_sim.srv import Spawn, Kill, SpawnRequest, SpawnResponse, KillRequest, KillResponse
+from std_msgs.msg import String
 
 class Ohm_Mecanum_Simulator:
 
@@ -32,6 +33,11 @@ class Ohm_Mecanum_Simulator:
         response = SpawnResponse(req.x, req.y, req.theta, req.name)
         return response
 
+    def service_callback_kill(self, req):
+        self.kill_robot(req.name)
+        response = KillResponse(True)
+        return response
+
     def service_callback_verbose(self, req):
         self._verbose = req.data
         if(self._verbose):
@@ -42,6 +48,11 @@ class Ohm_Mecanum_Simulator:
 
     def spawn_robot(self, x, y, theta, name):
         self._robots.append(Robot(x, y, theta, name))
+
+    def kill_robot(self, name):
+        for r in self._robots:
+            if(r._name == name):
+                self._robots.remove(r)
 
     def add_line_segment_pixelcoords(self, coords1, coords2):
         line_segment = (self.transform_to_robotcoords(coords1), self.transform_to_robotcoords(coords2))
@@ -74,8 +85,9 @@ class Ohm_Mecanum_Simulator:
     def run(self):
         bg_color = (64, 64, 255)
         rospy.Service('/spawn', Spawn, self.service_callback_spawn)
+        rospy.Service('/kill', Kill, self.service_callback_kill)
         rospy.Service('/verbose', SetBool, self.service_callback_verbose)
-        rate = rospy.Rate(25)
+        rate = rospy.Rate(50)
 
         clock = pygame.time.Clock()
         clock.tick(360)
