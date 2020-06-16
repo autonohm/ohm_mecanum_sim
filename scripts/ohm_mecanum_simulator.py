@@ -122,7 +122,7 @@ class Ohm_Mecanum_Simulator:
                 pos_sensor = r.get_pos_tof()
                 pos_hitpoint = r.get_far_tof()
 
-                # Determine distance to other robots
+                # Determine distances to other robots
                 dist_to_obstacles  = []
                 for obstacle in self._robots:
                     if(obstacle != r):
@@ -137,7 +137,7 @@ class Ohm_Mecanum_Simulator:
                             obstacle_rect.move(pixel_obstacle)
                             pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
                 
-                # Determine distance to line segments
+                # Determine distances to line segments
                 for obstacle in self._line_segment_obstacles:
                     dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
 
