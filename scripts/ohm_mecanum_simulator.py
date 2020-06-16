@@ -52,6 +52,7 @@ class Ohm_Mecanum_Simulator:
     def kill_robot(self, name):
         for r in self._robots:
             if(r._name == name):
+                r.stop()
                 self._robots.remove(r)
 
     def add_line_segment_pixelcoords(self, coords1, coords2):
@@ -82,6 +83,13 @@ class Ohm_Mecanum_Simulator:
                          (-coords[1] + self._surface.get_height()) / self._meter_to_pixel]
         return pixelcoords
 
+    def exit_simulation(self):
+        print("Exit simulation")
+        for r in self._robots:
+            r.stop()
+            del r
+        sys.exit()
+
     def run(self):
         bg_color = (64, 64, 255)
         rospy.Service('/spawn', Spawn, self.service_callback_spawn)
@@ -95,10 +103,10 @@ class Ohm_Mecanum_Simulator:
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    for r in self._robots:
-                        r.stop()
-                        del r
-                    sys.exit()
+                    self.exit_simulation()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_c and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        self.exit_simulation()
 
             self._surface.fill(bg_color)
             
