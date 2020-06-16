@@ -102,6 +102,11 @@ class Ohm_Mecanum_Simulator:
 
             self._surface.fill(bg_color)
             
+            # Draw obstacles
+            for obstacle in self._line_segment_obstacles:
+                pixel_segment_start = self.transform_to_pixelcoords(obstacle[0])
+                pixel_segment_end = self.transform_to_pixelcoords(obstacle[1])
+                pygame.draw.line(self._surface, pygame.Color(0, 0, 0), pixel_segment_start, pixel_segment_end, 3)
         
             # Convert robot coordinates for displaying all entities in pixel coordinates
             for r in self._robots:
@@ -124,7 +129,7 @@ class Ohm_Mecanum_Simulator:
                         obstacle_coords = obstacle.get_coords()
                         dist_to_obstacles = r.get_distance_to_circular_obstacle(obstacle_coords, obstacle.get_obstacle_radius(),  dist_to_obstacles)
 
-                        # Draw obstacle
+                        # Draw circular radius of obstacle
                         if(self._verbose):
                             pixel_obstacle = self.transform_to_pixelcoords(obstacle_coords)
                             obstacle_rect = obstacle.get_rect()
@@ -132,13 +137,9 @@ class Ohm_Mecanum_Simulator:
                             obstacle_rect.move(pixel_obstacle)
                             pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
                 
+                # Determine distance to line segments
                 for obstacle in self._line_segment_obstacles:
                     dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
-
-                    # Draw obstacle
-                    pixel_segment_start = self.transform_to_pixelcoords(obstacle[0])
-                    pixel_segment_end = self.transform_to_pixelcoords(obstacle[1])
-                    pygame.draw.line(self._surface, pygame.Color(0, 0, 0), pixel_segment_start, pixel_segment_end, 3)
 
                 r.publish_tof(dist_to_obstacles)
 
