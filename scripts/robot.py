@@ -14,6 +14,7 @@ from math import cos, sin, pi, sqrt
 from geometry_msgs.msg import Pose, Twist
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32MultiArray
+from sensor_msgs.msg import LaserScan
 from ohm_mecanum_sim.msg import WheelSpeed
 
 class Robot:
@@ -28,11 +29,17 @@ class Robot:
     _obstacle_radius = 0.45
 
     # Angle of facing direction
-    _phi_tof            = [0, pi, pi/2, -pi/2, pi/8, -pi/8, pi+pi/8, pi-pi/8]
+    #_phi_tof            = [0, pi, pi/2, -pi/2, pi/8, -pi/8, pi+pi/8, pi-pi/8]
+    _phi_tof            = []
 
     # Translation of ToF sensor in facing direction
-    _t_tof              = (0.4, 0.4, 0.2, 0.2, 0.45, 0.45, 0.45, 0.45)        
+    #_t_tof              = (0.4, 0.4, 0.2, 0.2, 0.45, 0.45, 0.45, 0.45)        
+    _t_tof              = []
     
+    _angle_min = -135*pi/180
+    _angle_inc = 1*pi/180
+    _laserbeams = 271
+
     # Facing directions of ToF sensors
     _v_face             = []
 
@@ -43,7 +50,7 @@ class Robot:
     _far_tof            = []
     
     # Range of ToF sensors
-    _rng_tof            = 4.0
+    _rng_tof            = 8.0
 
     # Radius of wheels
     _wheel_radius       = 0.05
@@ -86,6 +93,13 @@ class Robot:
         # Calculate maximum angular rate of robot in rad/s
         self._max_omega = self._max_speed / (self._wheel_base/2 + self._track/2)
 
+        self._angle_max = self._angle_min+(self._laserbeams-1)*self._angle_inc
+        if(self._angle_max != -self._angle_min):
+            print("Warning: laserbeams should be symmetric. angle_min = " + str(self._angle_min) + ", angle_max = " + str(self._angle_max))
+        for i in range(0, self._laserbeams-1):
+            self._phi_tof.append(i*self._angle_inc+self._angle_min)
+            self._t_tof.append(0.2)
+
         for i in range(0, len(self._phi_tof)):
             self._v_face.append((0,0))
             self._pos_tof.append((0,0))
@@ -108,6 +122,7 @@ class Robot:
         self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
         self._pub               = rospy.Publisher(str(self._name)+"/pose", Pose, queue_size=1)
         self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
+        self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
 
         self._run               = True
         self._thread            = threading.Timer(0.1, self.trigger)
@@ -191,6 +206,22 @@ class Robot:
         msg = Float32MultiArray(data=distances)
         self._pub_tof.publish(msg)
 
+        scan = LaserScan()
+        scan.header.stamp = rospy.Time.now()
+        scan.header.frame_id = 'laser'
+        scan.angle_min = self._angle_min
+        scan.angle_max = self._angle_max
+        scan.angle_increment = self._angle_inc
+        scan.time_increment = 1.0/50.0
+        scan.range_min = 0.0
+        scan.range_max = self._rng_tof
+        scan.ranges = []
+        scan.intensities = []
+        for i in range(0, self._laserbeams-1):
+            scan.ranges.append(distances[i])
+            scan.intensities.append(1)
+        self._pub_laser.publish(scan)
+
     def get_coords(self):
         return self._coords
 
@@ -250,8 +281,8 @@ class Robot:
             d = dist[i]
             if(d<0):
                 d = self._rng_tof
-            self._far_tof[i]    = (self._coords[0]+v_face[i][0]*(self._t_tof[i]+d),
-                                   self._coords[1]+v_face[i][1]*(self._t_tof[i]+d))
+            self._far_tof[i]    = (self._coords[0]+v_face[i][0]*d,
+                                   self._coords[1]+v_face[i][1]*d)
         return self._far_tof
 
     def get_facing_tof(self):
@@ -271,7 +302,7 @@ class Robot:
         pos_tof = self.get_pos_tof()
         far_tof = self.get_far_tof()
         for i in range(0, len(self._phi_tof)):
-            dist = self.line_line_intersection(start_line, end_line, pos_tof[i], far_tof[i])
+            dist = self.line_line_intersection(start_line, end_line, pos_tof[i], far_tof[i])+self._t_tof[i]
             if(dist<dist_to_obstacles[i] and dist>0):
                 dist_to_obstacles[i] = dist
         return dist_to_obstacles
