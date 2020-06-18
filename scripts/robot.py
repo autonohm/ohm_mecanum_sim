@@ -11,7 +11,7 @@ import time, threading
 import operator
 import numpy as np
 from math import cos, sin, pi, sqrt
-from geometry_msgs.msg import Pose, Twist
+from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
@@ -36,8 +36,13 @@ class Robot:
     #_t_tof              = (0.4, 0.4, 0.2, 0.2, 0.45, 0.45, 0.45, 0.45)        
     _t_tof              = []
     
+    # Minimum angle of laser beams (first beam)
     _angle_min = -135*pi/180
+
+    # Angle increment between beams
     _angle_inc = 1*pi/180
+
+    # Number of laser beams
     _laserbeams = 271
 
     # Facing directions of ToF sensors
@@ -51,6 +56,9 @@ class Robot:
     
     # Range of ToF sensors
     _rng_tof            = 8.0
+
+    # Offset of ToF sensors from the kinematic centre
+    _offset_tof         = 0.2
 
     # Radius of wheels
     _wheel_radius       = 0.05
@@ -98,7 +106,7 @@ class Robot:
             print("Warning: laserbeams should be symmetric. angle_min = " + str(self._angle_min) + ", angle_max = " + str(self._angle_max))
         for i in range(0, self._laserbeams-1):
             self._phi_tof.append(i*self._angle_inc+self._angle_min)
-            self._t_tof.append(0.2)
+            self._t_tof.append(self._offset_tof)
 
         for i in range(0, len(self._phi_tof)):
             self._v_face.append((0,0))
@@ -120,7 +128,7 @@ class Robot:
         self._sub_twist         = rospy.Subscriber(str(self._name)+"/cmd_vel", Twist, self.callback_twist)
         self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
         self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
-        self._pub               = rospy.Publisher(str(self._name)+"/pose", Pose, queue_size=1)
+        self._pub_pose          = rospy.Publisher(str(self._name)+"/pose", PoseStamped, queue_size=1)
         self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
         self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
 
@@ -183,15 +191,17 @@ class Robot:
             self._coords[1] += v[1]  * elapsed
 
             # Publish pose
-            p = Pose()
-            p.position.x = self._coords[0]
-            p.position.y = self._coords[1]
-            p.position.z = 0
-            p.orientation.w = cos(self._theta/2.0)
-            p.orientation.x = 0
-            p.orientation.y = 0
-            p.orientation.z = sin(self._theta/2.0)
-            self._pub.publish(p)
+            p = PoseStamped()
+            p.header.frame_id = "odom"
+            p.header.stamp = rospy.Time.now()
+            p.pose.position.x = self._coords[0]
+            p.pose.position.y = self._coords[1]
+            p.pose.position.z = 0
+            p.pose.orientation.w = cos(self._theta/2.0)
+            p.pose.orientation.x = 0
+            p.pose.orientation.y = 0
+            p.pose.orientation.z = sin(self._theta/2.0)
+            self._pub_pose.publish(p)
 
             if(self._reset):
                 time.sleep(1.0)

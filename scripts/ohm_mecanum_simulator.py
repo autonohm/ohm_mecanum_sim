@@ -155,8 +155,7 @@ class Ohm_Mecanum_Simulator:
                 for i in range(0, len(dist_to_obstacles)):
                     if(dist_to_obstacles[i]<min_dist and dist_to_obstacles[i]>0):
                         min_dist = dist_to_obstacles[i];
-
-                if(min_dist<0.2):
+                if(min_dist<(0.2+r._offset_tof)):
                     r.reset_pose()
                 elif (r._coords[0] < 0 or r._coords[1] < 0 or r._coords[0] > self._surface.get_width()/self._meter_to_pixel or r._coords[1] > self._surface.get_height()/self._meter_to_pixel):
                     r.reset_pose()
