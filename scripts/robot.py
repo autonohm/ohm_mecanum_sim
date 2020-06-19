@@ -38,13 +38,13 @@ class Robot:
     _t_tof              = []
     
     # Minimum angle of laser beams (first beam)
-    _angle_min = -135*pi/180
+    _angle_min = -90*pi/180
 
     # Angle increment between beams
-    _angle_inc = 1*pi/180
+    _angle_inc = 10*pi/180
 
     # Number of laser beams
-    _laserbeams = 271
+    _laserbeams = 19
 
     # Facing directions of ToF sensors
     _v_face             = []
@@ -106,7 +106,7 @@ class Robot:
         self._angle_max = self._angle_min+(self._laserbeams-1)*self._angle_inc
         if(self._angle_max != -self._angle_min):
             print("Warning: laserbeams should be symmetric. angle_min = " + str(self._angle_min) + ", angle_max = " + str(self._angle_max))
-        for i in range(0, self._laserbeams-1):
+        for i in range(0, self._laserbeams):
             self._phi_tof.append(i*self._angle_inc+self._angle_min)
             self._t_tof.append(self._offset_tof)
 
