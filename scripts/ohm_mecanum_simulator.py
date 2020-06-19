@@ -119,6 +119,7 @@ class Ohm_Mecanum_Simulator:
             # Convert robot coordinates for displaying all entities in pixel coordinates
             for r in self._robots:
 
+                r.acquire_lock()
                 # Draw robot symbol
                 coords      = r.get_coords()
                 pixel_robot = self.transform_to_pixelcoords(coords)
@@ -150,6 +151,8 @@ class Ohm_Mecanum_Simulator:
                     dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
 
                 r.publish_tof(dist_to_obstacles)
+
+                r.release_lock()
 
                 min_dist = 9999
                 for i in range(0, len(dist_to_obstacles)):
