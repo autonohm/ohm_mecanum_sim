@@ -60,13 +60,13 @@ class Ohm_Mecanum_Simulator:
         self.add_line_segment_obstacle(line_segment)
 
     def add_rectangle_pixelcoords(self, coords1, coords2):
-        line_segment = (self.transform_to_robotcoords([coords1[0], coords1[1]-15]), self.transform_to_robotcoords([coords1[0], coords2[1]+15]))
+        line_segment = (self.transform_to_robotcoords([coords1[0], coords1[1]]), self.transform_to_robotcoords([coords1[0], coords2[1]]))
         self.add_line_segment_obstacle(line_segment)
-        line_segment = (self.transform_to_robotcoords([coords1[0]-15, coords2[1]]), self.transform_to_robotcoords([coords2[0]+15, coords2[1]]))
+        line_segment = (self.transform_to_robotcoords([coords1[0], coords2[1]]), self.transform_to_robotcoords([coords2[0], coords2[1]]))
         self.add_line_segment_obstacle(line_segment)
-        line_segment = (self.transform_to_robotcoords([coords2[0], coords2[1]+15]), self.transform_to_robotcoords([coords2[0], coords1[1]-15]))
+        line_segment = (self.transform_to_robotcoords([coords2[0], coords2[1]]), self.transform_to_robotcoords([coords2[0], coords1[1]]))
         self.add_line_segment_obstacle(line_segment)
-        line_segment = (self.transform_to_robotcoords([coords2[0]+15, coords1[1]]), self.transform_to_robotcoords([coords1[0]-15, coords1[1]]))
+        line_segment = (self.transform_to_robotcoords([coords2[0], coords1[1]]), self.transform_to_robotcoords([coords1[0], coords1[1]]))
         self.add_line_segment_obstacle(line_segment)
 
 
