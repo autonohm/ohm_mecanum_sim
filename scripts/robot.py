@@ -38,13 +38,13 @@ class Robot:
     _t_tof              = []
     
     # Minimum angle of laser beams (first beam)
-    _angle_min = -90*pi/180
+    _angle_min = -135*pi/180
 
     # Angle increment between beams
-    _angle_inc = 10*pi/180
+    _angle_inc = 1*pi/180
 
     # Number of laser beams
-    _laserbeams = 19
+    _laserbeams = 271
 
     # Facing directions of ToF sensors
     _v_face             = []
@@ -251,7 +251,7 @@ class Robot:
         scan.range_max = self._rng_tof
         scan.ranges = []
         scan.intensities = []
-        for i in range(0, self._laserbeams-1):
+        for i in range(0, self._laserbeams):
             scan.ranges.append(distances[i])
             scan.intensities.append(1)
         self._pub_laser.publish(scan)
