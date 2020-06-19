@@ -85,6 +85,7 @@ class Robot:
         self._reset = False
         self._coords = [x, y]
         self._theta = theta
+        self._lock = threading.Lock()
 
         # Matrix of kinematic concept
         lxly = (self._wheel_base/2 + self._track/2) / self._wheel_radius
@@ -160,12 +161,20 @@ class Robot:
         self._v = [vx, vy]
         self._omega = omega
 
+    def acquire_lock(self):
+        self._lock.acquire()
+
+    def release_lock(self):
+        self._lock.release()
+
     def stop(self):
         self.set_velocity(0, 0, 0)
         self._run = False
 
     def trigger(self):
         while(self._run):
+            self.acquire_lock()
+
             # Measure elapsed time
             timestamp = rospy.Time.now()#time.process_time()
             elapsed = (timestamp - self._timestamp).to_sec()
@@ -224,6 +233,7 @@ class Robot:
                 self._theta  = self._initial_theta
                 self._reset = False
 
+            self.release_lock()
             time.sleep(0.04)
 
     def publish_tof(self, distances):
