@@ -13,6 +13,7 @@ from std_srvs.srv import SetBool, SetBoolResponse
 from robot import Robot
 from ohm_mecanum_sim.srv import Spawn, Kill, SpawnRequest, SpawnResponse, KillRequest, KillResponse
 from std_msgs.msg import String
+import numpy as np
 
 class Ohm_Mecanum_Simulator:
 
@@ -46,8 +47,8 @@ class Ohm_Mecanum_Simulator:
             msg = "Verbosity decreased"
         return SetBoolResponse(True, msg)
 
-    def spawn_robot(self, x, y, theta, name):
-        self._robots.append(Robot(x, y, theta, name))
+    def spawn_robot(self, T, T_center, name):
+        self._robots.append(Robot(T, T_center, name))
 
     def kill_robot(self, name):
         for r in self._robots:

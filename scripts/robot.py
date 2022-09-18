@@ -10,7 +10,7 @@ import rospy
 import time, threading
 import operator
 import numpy as np
-from math import cos, sin, pi, sqrt
+from math import cos, sin, pi, sqrt, acos, atan2
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32MultiArray
@@ -38,13 +38,13 @@ class Robot:
     _t_tof              = []
     
     # Minimum angle of laser beams (first beam)
-    _angle_min = -135*pi/180
+    _angle_min = -45*pi/180
 
     # Angle increment between beams
-    _angle_inc = 1*pi/180
+    _angle_inc = 10*pi/180
 
     # Number of laser beams
-    _laserbeams = 271
+    _laserbeams = 0
 
     # Facing directions of ToF sensors
     _v_face             = []
@@ -79,23 +79,33 @@ class Robot:
     # Animation counter, this variable is used to switch image representation to pretend a driving robot
     _animation_cnt      = 0
 
-    def __init__(self, x, y, theta, name):
-        self._initial_coords = [x, y]
-        self._initial_theta  = theta
+    def __init__(self, T, T_center, name):
+        self._T_pose_init = T
+        self._T_pose = self._T_pose_init
+
         self._reset = False
-        self._coords = [x, y]
-        self._theta = theta
+        self._coords = [self._T_pose[0, 2], self._T_pose[1, 2]]
+        self._theta = atan2(self._T_pose[1, 0], self._T_pose[0, 0])
         self._lock = threading.Lock()
+
+        # SM: Added for flexible kinematic evaluation
+        self._T_center = T_center
+        self._T_center_inv = np.linalg.pinv(self._T_center)
+
+        self._T_center_relative = self._T_pose * self._T_center_inv
+
+        self._T_target = self._T_center
 
         # Matrix of kinematic concept
         lxly = (self._wheel_base/2 + self._track/2) / self._wheel_radius
         rinv = 1/self._wheel_radius
-        self._T = np.matrix([[rinv, -rinv, -lxly],
+        self._T_kinematic = np.matrix([[rinv, -rinv, -lxly],
                             [-rinv, -rinv, -lxly],
                             [ rinv,  rinv, -lxly],
                             [-rinv,  rinv, -lxly]])
+                            
         # Inverse of matrix is used for setting individual wheel speeds
-        self._Tinv = np.linalg.pinv(self._T)
+        self._Tinv_kinematic = np.linalg.pinv(self._T_kinematic)
 
         # Calculate maximum linear speed in m/s
         self._max_speed = self._wheel_omega_max * self._wheel_radius
@@ -135,6 +145,10 @@ class Robot:
         self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
         self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
 
+        # SM: Added for flexible kinematic evaluation
+        self._sub_target        = rospy.Subscriber("/target", PoseStamped, self.callback_target)
+        self._sub_center        = rospy.Subscriber("/kinematic_center", PoseStamped, self.callback_center)
+
         self._run               = True
         self._thread            = threading.Timer(0.1, self.trigger)
         self._thread.start()
@@ -152,12 +166,12 @@ class Robot:
 
     def set_wheel_speed(self, omega_wheel):
         w = np.array([omega_wheel[0], omega_wheel[1], omega_wheel[2], omega_wheel[3]])
-        res = self._Tinv.dot(w)
+        res = self._Tinv_kinematic.dot(w)
         self.set_velocity(res[0,0], res[0,1], res[0,2])
 
     def set_velocity(self, vx, vy, omega):
         x = np.array([vx, vy, omega])
-        omega_i = self._T.dot(x)
+        omega_i = self._T_kinematic.dot(x)
         self._v = [vx, vy]
         self._omega = omega
 
@@ -180,22 +194,44 @@ class Robot:
             elapsed = (timestamp - self._timestamp).to_sec()
             self._timestamp = timestamp
 
+            # SM: Uncommented for flexible kinematic evaluation
             # Check, whether commands arrived recently
-            last_command_arrival = timestamp - self._last_command
-            if last_command_arrival.to_sec() > 0.5:
-                self._v[0] = 0
-                self._v[1] = 0
-                self._omega = 0
+            #last_command_arrival = timestamp - self._last_command
+            #if last_command_arrival.to_sec() > 0.5:
+            #    self._v[0] = 0
+            #    self._v[1] = 0
+            #    self._omega = 0
+
+            # SM: Added for flexible kinematic evaluation
+            kp = 1.0
+                      
+            T_moveto = self._T_target * self._T_center_relative
+            self._v[0]  = kp * (T_moveto[0, 2] - self._coords[0])
+            self._v[1]  = kp * (T_moveto[1, 2] - self._coords[1])
+            target_theta = atan2(T_moveto[1, 0], T_moveto[0, 0])
+            self._omega = kp * (target_theta - self._theta)
+
+            #print(self._T_center_relative)
 
             # Change orientation
             self._theta += self._omega * elapsed
+
+            # Update Pose
+            self._T_pose[0, 2] = self._coords[0];
+            self._T_pose[1, 2] = self._coords[1];
+            self._T_pose[0, 0] = cos(self._theta);
+            self._T_pose[0, 1] = -sin(self._theta);
+            self._T_pose[1, 0] = sin(self._theta);
+            self._T_pose[1, 1] = cos(self._theta);
+
+
 
             # Transform velocity vectors to global frame
             cos_theta = cos(self._theta)
             sin_theta = sin(self._theta)
             v =   [self._v[0], self._v[1]]
-            v[0] = cos_theta*self._v[0] - sin_theta * self._v[1]
-            v[1] = sin_theta*self._v[0] + cos_theta * self._v[1]
+            #v[0] = cos_theta*self._v[0] - sin_theta * self._v[1]
+            #v[1] = sin_theta*self._v[0] + cos_theta * self._v[1]
 
             # Move robot
             self._coords[0] += v[0]  * elapsed
@@ -228,9 +264,9 @@ class Robot:
 
             if(self._reset):
                 time.sleep(1.0)
-                self._coords[0] = self._initial_coords[0]
-                self._coords[1] = self._initial_coords[1]
-                self._theta  = self._initial_theta
+                self._T_pose = self._T_pose_init
+                self._coords = [self._T_pose[0, 2], self._T_pose[1, 2]]
+                self._theta = atan2(self._T_pose[1, 0], self._T_pose[0, 0])
                 self._reset = False
 
             self.release_lock()
@@ -365,6 +401,32 @@ class Robot:
         omega = [data.w_front_left, data.w_front_right, data.w_rear_left, data.w_rear_right]
         self.set_wheel_speed(omega);
         self._last_command = rospy.Time.now()
+
+    def callback_target(self, pose):
+        self._T_target[0, 2] = pose.pose.position.x
+        self._T_target[1, 2] = pose.pose.position.y
+        angle = 2 * acos(pose.pose.orientation.w)
+        if pose.pose.orientation.z < 0:
+            angle = -angle
+        self._T_target[0, 0] = cos(angle)
+        self._T_target[0, 1] = -sin(angle)
+        self._T_target[1, 0] = sin(angle)
+        self._T_target[1, 1] = cos(angle)
+
+    def callback_center(self, pose):
+        self._T_center[0, 2] = pose.pose.position.x
+        self._T_center[1, 2] = pose.pose.position.y
+        angle = 2 * acos(pose.pose.orientation.w)
+        if pose.pose.orientation.z < 0:
+            angle = -angle
+        self._T_center[0, 0] = cos(angle)
+        self._T_center[0, 1] = -sin(angle)
+        self._T_center[1, 0] = sin(angle)
+        self._T_center[1, 1] = cos(angle)
+        self._T_center_inv = np.linalg.pinv(self._T_center)
+        self._T_center_relative = self._T_pose_init * self._T_center_inv
+
+
 
     def line_length(self, p1, p2):
         return sqrt( (p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]) )
