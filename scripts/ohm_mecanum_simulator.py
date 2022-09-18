@@ -70,6 +70,11 @@ class Ohm_Mecanum_Simulator:
             
             # Convert robot coordinates for displaying all entities in pixel coordinates
             for f in self._fleets:
+                coords_fleet      = f.get_coords()
+                pixel_fleet = self.transform_to_pixelcoords(coords_fleet)
+                
+                #self._surface.set_at((10, 10), (255, 0, 0))
+
                 robots = f.get_robots()
 
                 for r in robots:

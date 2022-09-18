@@ -33,6 +33,9 @@ class Fleet:
         self._lock    = threading.Lock()
         self._sub_joy = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
 
+    def get_coords(self):
+        return [self._T_pose[0, 2], self._T_pose[1, 2]]
+
     def add_robot(self, T, name):
         T_robot = self._T_pose * T
         self._robots.append(Robot(T_robot, name))
@@ -57,32 +60,27 @@ class Fleet:
         omega = data.axes[2]
         for robot in self._robots:
             
-            pose = robot._T_pose
+            T_pose_fleet     = self._T_pose
+            T_pose_robot     = robot._T_pose
+            T_pose_robot_inv = np.linalg.pinv(T_pose_robot)
 
-            # calculate pose relative to kinematic center
-            T_pose_inv = np.linalg.pinv(self._T_pose)
-            pose_rel = T_pose_inv * pose
-            
-            # isolate orientation from robot pose
-            rp = pose
-            #rp[0, 2] = 0
-            #rp[1, 2] = 0
-            
-            # invert it
-            rpi = np.linalg.pinv(rp)
+            # calculate translational part in coordinate system of robot
+            vtx_robot = T_pose_robot_inv[0, 0] * vx + T_pose_robot_inv[0, 1] * vy
+            vty_robot = T_pose_robot_inv[1, 0] * vx + T_pose_robot_inv[1, 1] * vy
 
-            # calculate translational part in coordinate system of fleet
-            vtx = rpi[0, 0] * vx + rpi[0, 1] * vy
-            vty = rpi[1, 0] * vx + rpi[1, 1] * vy
-
-            nx = pose[0, 2] - self._T_pose[0, 2]
-            ny = pose[1, 2] - self._T_pose[1, 2]
+            # calculate translation vector between kinematic center of fleet and robot position
+            nx = T_pose_robot[0, 2] - T_pose_fleet[0, 2]
+            ny = T_pose_robot[1, 2] - T_pose_fleet[1, 2]
             
+            # the perpendicular vector (normal) points to the direction, where a rotation around the fleet's kinematic center wourld lead us.
             vnx = -ny * omega
             vny = nx * omega
-            vnx2 = rpi[0, 0] * vnx + rpi[0, 1] * vny
-            vny2 = rpi[1, 0] * vnx + rpi[1, 1] * vny
+
+            # now, translate this movement in the global coordinate system
+            vwx_robot = T_pose_robot_inv[0, 0] * vnx + T_pose_robot_inv[0, 1] * vny
+            vwy_robot = T_pose_robot_inv[1, 0] * vnx + T_pose_robot_inv[1, 1] * vny
     
-            robot.set_velocity(vtx+vnx2, vty+vny2, omega)
+            # and add it to the translational part
+            robot.set_velocity(vtx_robot+vwx_robot, vty_robot+vwy_robot, omega)
 
         self._last_command = rospy.Time.now()
