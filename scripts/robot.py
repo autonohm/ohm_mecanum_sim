@@ -17,6 +17,7 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from ohm_mecanum_sim.msg import WheelSpeed
+from copy import copy, deepcopy
 
 class Robot:
 
@@ -45,8 +46,8 @@ class Robot:
     _animation_cnt      = 0
 
     def __init__(self, T, name):
-        self._T_pose_init = T
-        self._T_pose = self._T_pose_init
+        self._T_pose_init =deepcopy(T)
+        self._T_pose = T
 
         self._reset = False
         self._coords = [self._T_pose[0, 2], self._T_pose[1, 2]]
@@ -179,10 +180,17 @@ class Robot:
 
             if(self._reset):
                 time.sleep(1.0)
-                self._T_pose = self._T_pose_init
+                self._T_pose = deepcopy(self._T_pose_init)
                 self._coords = [self._T_pose[0, 2], self._T_pose[1, 2]]
                 self._theta = atan2(self._T_pose[1, 0], self._T_pose[0, 0])
                 self._reset = False
+
+            self._T_pose[0, 2] = self._coords[0]
+            self._T_pose[1, 2] = self._coords[1]
+            self._T_pose[0, 0] = cos(self._theta)
+            self._T_pose[0, 1] = -sin(self._theta)
+            self._T_pose[1, 0] = sin(self._theta)
+            self._T_pose[1, 1] = cos(self._theta)
 
             self.release_lock()
             time.sleep(0.04)

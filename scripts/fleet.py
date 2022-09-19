@@ -60,25 +60,26 @@ class Fleet:
         omega = data.axes[2]
         for robot in self._robots:
             
-            T_pose_fleet     = self._T_pose
-            T_pose_robot     = robot._T_pose
-            T_pose_robot_inv = np.linalg.pinv(T_pose_robot)
+            T_pose_fleet          = self._T_pose
+            T_pose_robot_to_fleet = robot._T_pose_init
+            T_pose_r2f_inv = np.linalg.pinv(T_pose_robot_to_fleet)
+            print(robot._T_pose)
 
             # calculate translational part in coordinate system of robot
-            vtx_robot = T_pose_robot_inv[0, 0] * vx + T_pose_robot_inv[0, 1] * vy
-            vty_robot = T_pose_robot_inv[1, 0] * vx + T_pose_robot_inv[1, 1] * vy
+            vtx_robot = T_pose_r2f_inv[0, 0] * vx + T_pose_r2f_inv[0, 1] * vy
+            vty_robot = T_pose_r2f_inv[1, 0] * vx + T_pose_r2f_inv[1, 1] * vy
 
             # calculate translation vector between kinematic center of fleet and robot position
-            nx = T_pose_robot[0, 2] - T_pose_fleet[0, 2]
-            ny = T_pose_robot[1, 2] - T_pose_fleet[1, 2]
+            nx = T_pose_robot_to_fleet[0, 2] - T_pose_fleet[0, 2]
+            ny = T_pose_robot_to_fleet[1, 2] - T_pose_fleet[1, 2]
             
             # the perpendicular vector (normal) points to the direction, where a rotation around the fleet's kinematic center wourld lead us.
             vnx = -ny * omega
             vny = nx * omega
 
             # now, translate this movement in the global coordinate system
-            vwx_robot = T_pose_robot_inv[0, 0] * vnx + T_pose_robot_inv[0, 1] * vny
-            vwy_robot = T_pose_robot_inv[1, 0] * vnx + T_pose_robot_inv[1, 1] * vny
+            vwx_robot = T_pose_r2f_inv[0, 0] * vnx + T_pose_r2f_inv[0, 1] * vny
+            vwy_robot = T_pose_r2f_inv[1, 0] * vnx + T_pose_r2f_inv[1, 1] * vny
     
             # and add it to the translational part
             robot.set_velocity(vtx_robot+vwx_robot, vty_robot+vwy_robot, omega)

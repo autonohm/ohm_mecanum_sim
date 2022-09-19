@@ -57,7 +57,7 @@ T4 = np.matrix([[cos(theta4), -sin(theta4), x4],
 # Common kinematic center
 x_fleet = 8
 y_fleet = 5
-theta_fleet = 0
+theta_fleet = -pi/2
 
 T_fleet = np.matrix([[cos(theta_fleet), -sin(theta_fleet), x_fleet],
                         [sin(theta_fleet), cos(theta_fleet), y_fleet],
