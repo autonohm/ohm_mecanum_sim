@@ -17,12 +17,13 @@ from nav_msgs.msg import Odometry
 from ohm_mecanum_sim.msg import WheelSpeed
 from ohm_mecanum_sim.srv import Spawn, Kill, SpawnRequest, SpawnResponse, KillRequest, KillResponse
 from robot import Robot
+from copy import copy, deepcopy
 
 class Fleet:
 
     def __init__(self, T, name):
-        self._T_pose_init = T
-        self._T_pose  = self._T_pose_init
+        self._T_pose_init = deepcopy(T)
+        self._T_pose  = T
         self._name = name
 
         self._robots = []
@@ -63,7 +64,7 @@ class Fleet:
             T_pose_fleet          = self._T_pose
             T_pose_robot_to_fleet = robot._T_pose_init
             T_pose_r2f_inv = np.linalg.pinv(T_pose_robot_to_fleet)
-            print(robot._T_pose)
+            print(T_pose_fleet)
 
             # calculate translational part in coordinate system of robot
             vtx_robot = T_pose_r2f_inv[0, 0] * vx + T_pose_r2f_inv[0, 1] * vy
