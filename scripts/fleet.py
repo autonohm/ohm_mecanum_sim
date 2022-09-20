@@ -22,8 +22,11 @@ from copy import copy, deepcopy
 class Fleet:
 
     def __init__(self, T, name):
-        self._T_pose_init = deepcopy(T)
-        self._T_pose  = T
+        self._T_pose  = deepcopy(T)
+        self._T_r2f_ref = np.matrix([[1, 0, 0],
+                                     [0, 1, 0],
+                                     [0, 0, 1]])
+        
         self._name = name
 
         self._robots = []
@@ -39,6 +42,8 @@ class Fleet:
 
     def add_robot(self, T, name):
         T_robot = self._T_pose * T
+        if (len(self._robots)==0):
+            self._T_r2f_ref = deepcopy(T)
         self._robots.append(Robot(T_robot, name))
 
     def get_robots(self):
@@ -55,34 +60,45 @@ class Fleet:
         return response
 
     def callback_joy(self, data):
-        #TODO: check for max speed of all robots
+        
+        if (len(self._robots)==0):
+            return
+
         vx = data.axes[1]
         vy = data.axes[0]
         omega = data.axes[2]
+
+        
+        T_r2f_ref_inv = np.linalg.pinv(self._T_r2f_ref)
+        T_pose_fleet = self._robots[0]._T_pose * T_r2f_ref_inv
+        T_pose_fleet_inv = np.linalg.pinv(T_pose_fleet)
+
         for robot in self._robots:
             
-            T_pose_fleet          = self._T_pose
-            T_pose_robot_to_fleet = robot._T_pose_init
-            T_pose_r2f_inv = np.linalg.pinv(T_pose_robot_to_fleet)
-            print(T_pose_fleet)
+            T_pose_r2f = T_pose_fleet_inv * robot._T_pose
+            print(T_pose_r2f)
+            T_pose_r2f_inv = np.linalg.pinv(T_pose_r2f)
+            #print(T_pose_fleet)
 
             # calculate translational part in coordinate system of robot
-            vtx_robot = T_pose_r2f_inv[0, 0] * vx + T_pose_r2f_inv[0, 1] * vy
-            vty_robot = T_pose_r2f_inv[1, 0] * vx + T_pose_r2f_inv[1, 1] * vy
+            nx = -T_pose_r2f[1, 2] * omega
+            ny = T_pose_r2f[0, 2] * omega
+            vtx_robot = T_pose_r2f_inv[0, 0] * (vx+nx) + T_pose_r2f_inv[0, 1] * (vy+ny)
+            vty_robot = T_pose_r2f_inv[1, 0] * (vx+nx) + T_pose_r2f_inv[1, 1] * (vy+ny)
 
             # calculate translation vector between kinematic center of fleet and robot position
-            nx = T_pose_robot_to_fleet[0, 2] - T_pose_fleet[0, 2]
-            ny = T_pose_robot_to_fleet[1, 2] - T_pose_fleet[1, 2]
+            #nx = T_pose_robot_to_fleet[0, 2]# - T_pose_fleet[0, 2]
+            #ny = T_pose_robot_to_fleet[1, 2]# - T_pose_fleet[1, 2]
             
             # the perpendicular vector (normal) points to the direction, where a rotation around the fleet's kinematic center wourld lead us.
-            vnx = -ny * omega
-            vny = nx * omega
+            #vnx = -ny * omega
+            #vny = nx * omega
 
             # now, translate this movement in the global coordinate system
-            vwx_robot = T_pose_r2f_inv[0, 0] * vnx + T_pose_r2f_inv[0, 1] * vny
-            vwy_robot = T_pose_r2f_inv[1, 0] * vnx + T_pose_r2f_inv[1, 1] * vny
+            #vwx_robot = T_pose_r2f_inv[0, 0] * vnx + T_pose_r2f_inv[0, 1] * vny
+            #vwy_robot = T_pose_r2f_inv[1, 0] * vnx + T_pose_r2f_inv[1, 1] * vny
     
             # and add it to the translational part
-            robot.set_velocity(vtx_robot+vwx_robot, vty_robot+vwy_robot, omega)
+            robot.set_velocity(vtx_robot, vty_robot, omega)
 
         self._last_command = rospy.Time.now()

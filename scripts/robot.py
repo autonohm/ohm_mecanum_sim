@@ -47,7 +47,7 @@ class Robot:
 
     def __init__(self, T, name):
         self._T_pose_init =deepcopy(T)
-        self._T_pose = T
+        self._T_pose = deepcopy(T)
 
         self._reset = False
         self._coords = [self._T_pose[0, 2], self._T_pose[1, 2]]

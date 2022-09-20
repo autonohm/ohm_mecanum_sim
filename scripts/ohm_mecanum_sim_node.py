@@ -28,28 +28,28 @@ sim = Ohm_Mecanum_Simulator(surface, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
 # Robot 1
 x1     = 1
 y1     = 0
-theta1 = 0
+theta1 = pi/2
 T1 = np.matrix([[cos(theta1), -sin(theta1), x1],
                 [sin(theta1), cos(theta1), y1],
                 [0, 0, 1]])
 
 x2     = -1
 y2     = 0
-theta2 = pi/2
+theta2 = pi/4
 T2 = np.matrix([[cos(theta2), -sin(theta2), x2],
                 [sin(theta2), cos(theta2), y2],
                 [0, 0, 1]])
 
 x3     = 0
 y3     = 2
-theta3 = pi/4
+theta3 = -pi/6
 T3 = np.matrix([[cos(theta3), -sin(theta3), x3],
                 [sin(theta3), cos(theta3), y3],
                 [0, 0, 1]])
 
 x4     = 0
 y4     = -2
-theta4 = -pi/4
+theta4 = -pi/3
 T4 = np.matrix([[cos(theta4), -sin(theta4), x4],
                 [sin(theta4), cos(theta4), y4],
                 [0, 0, 1]])
@@ -57,7 +57,7 @@ T4 = np.matrix([[cos(theta4), -sin(theta4), x4],
 # Common kinematic center
 x_fleet = 8
 y_fleet = 5
-theta_fleet = 0
+theta_fleet = pi
 
 T_fleet = np.matrix([[cos(theta_fleet), -sin(theta_fleet), x_fleet],
                         [sin(theta_fleet), cos(theta_fleet), y_fleet],
