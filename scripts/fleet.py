@@ -31,8 +31,8 @@ class Fleet:
 
         self._robots = []
 
-        rospy.Service('/spawn', Spawn, self.service_callback_spawn)
-        rospy.Service('/kill', Kill, self.service_callback_kill)
+        rospy.Service(str(self._name)+"/spawn", Spawn, self.service_callback_spawn)
+        rospy.Service(str(self._name)+"/kill", Kill, self.service_callback_kill)
 
         self._lock    = threading.Lock()
         self._sub_joy = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
@@ -76,8 +76,9 @@ class Fleet:
         for robot in self._robots:
             
             T_pose_r2f = T_pose_fleet_inv * robot._T_pose
-            print(T_pose_r2f)
             T_pose_r2f_inv = np.linalg.pinv(T_pose_r2f)
+            
+            #print(T_pose_r2f)
             #print(T_pose_fleet)
 
             # calculate translational part in coordinate system of robot
@@ -85,18 +86,6 @@ class Fleet:
             ny = T_pose_r2f[0, 2] * omega
             vtx_robot = T_pose_r2f_inv[0, 0] * (vx+nx) + T_pose_r2f_inv[0, 1] * (vy+ny)
             vty_robot = T_pose_r2f_inv[1, 0] * (vx+nx) + T_pose_r2f_inv[1, 1] * (vy+ny)
-
-            # calculate translation vector between kinematic center of fleet and robot position
-            #nx = T_pose_robot_to_fleet[0, 2]# - T_pose_fleet[0, 2]
-            #ny = T_pose_robot_to_fleet[1, 2]# - T_pose_fleet[1, 2]
-            
-            # the perpendicular vector (normal) points to the direction, where a rotation around the fleet's kinematic center wourld lead us.
-            #vnx = -ny * omega
-            #vny = nx * omega
-
-            # now, translate this movement in the global coordinate system
-            #vwx_robot = T_pose_r2f_inv[0, 0] * vnx + T_pose_r2f_inv[0, 1] * vny
-            #vwy_robot = T_pose_r2f_inv[1, 0] * vnx + T_pose_r2f_inv[1, 1] * vny
     
             # and add it to the translational part
             robot.set_velocity(vtx_robot, vty_robot, omega)
