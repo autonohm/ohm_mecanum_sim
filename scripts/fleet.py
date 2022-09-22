@@ -68,25 +68,27 @@ class Fleet:
         vy = data.axes[0]
         omega = data.axes[2]
 
-        
+        # This is the inverse of the matrix transforming
+        # the first robot to the common fleet coordinate system
         T_r2f_ref_inv = np.linalg.pinv(self._T_r2f_ref)
+
+        # The fleet's reference pose is coupled with
+        # the pose of the first robot
         T_pose_fleet = self._robots[0]._T_pose * T_r2f_ref_inv
         T_pose_fleet_inv = np.linalg.pinv(T_pose_fleet)
 
         for robot in self._robots:
             
+            # Transformation matrix 
             T_pose_r2f = T_pose_fleet_inv * robot._T_pose
             T_pose_r2f_inv = np.linalg.pinv(T_pose_r2f)
-            
-            #print(T_pose_r2f)
-            #print(T_pose_fleet)
 
             # calculate translational part in coordinate system of robot
             nx = -T_pose_r2f[1, 2] * omega
             ny = T_pose_r2f[0, 2] * omega
             vtx_robot = T_pose_r2f_inv[0, 0] * (vx+nx) + T_pose_r2f_inv[0, 1] * (vy+ny)
             vty_robot = T_pose_r2f_inv[1, 0] * (vx+nx) + T_pose_r2f_inv[1, 1] * (vy+ny)
-    
+
             # and add it to the translational part
             robot.set_velocity(vtx_robot, vty_robot, omega)
 
