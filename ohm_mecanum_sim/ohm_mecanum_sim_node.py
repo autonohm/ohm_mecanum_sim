@@ -2,12 +2,13 @@
 
 # ------------------------------------------------------------
 # Author:      Stefan May
-# Date:        1.5.2024
+# Date:        01.05.2024
 # Description: Pygame-based robot simulator application for ROS2
 # ------------------------------------------------------------
 
 import pygame
 import rclpy
+from rclpy.node import Node
 #from ohm_mecanum_simulator import Ohm_Mecanum_Simulator
 
 from std_msgs.msg import String

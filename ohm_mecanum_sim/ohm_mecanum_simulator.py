@@ -2,8 +2,8 @@
 
 # ------------------------------------------------------------
 # Author:      Stefan May
-# Date:        20.4.2020
-# Description: Pygame-based robot simulator with ROS interface
+# Date:        01.05.2024
+# Description: Pygame-based robot simulator with ROS2 interface
 # ------------------------------------------------------------
 
 import rospy

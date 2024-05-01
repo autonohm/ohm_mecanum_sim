@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------
 # Author:      Stefan May
-# Date:        20.4.2020
+# Date:        01.05.2020
 # Description: Pygame-based robot representation for the mecanum simulator
 # ------------------------------------------------------------------------
 
