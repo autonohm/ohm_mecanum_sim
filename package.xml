@@ -3,9 +3,9 @@
 <package format="3">
   <name>ohm_mecanum_sim</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="stefan.may@th-nuernberg.de">mayst</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Minimal simulator for Mecanum-wheeled robots</description>
+  <maintainer email="stefan.may@th-nuernberg.de">Stefan May</maintainer>
+  <license>Apache License 2.0</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
