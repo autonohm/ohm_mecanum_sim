@@ -11,7 +11,8 @@ import sys
 
 import rclpy
 from rclpy.node import Node
-from ohm_mecanum_sim.srv import Spawn, Kill, SpawnRequest, SpawnResponse, KillRequest, KillResponse
+
+from ohm_mecanum_sim.robot import Robot
 
 class Ohm_Mecanum_Simulator(Node):
 
@@ -23,11 +24,11 @@ class Ohm_Mecanum_Simulator(Node):
         self._line_segment_obstacles = []
         self._verbose = False
         timer_period = 0.05
-        
-        self.create_service('/spawn', Spawn, self.service_callback_spawn)
-
         pygame.display.set_caption(windowtitle)
-    
+
+    def __del__(self):
+        pass
+
     def start_scheduler(self):
         clock = pygame.time.Clock()
         clock.tick(360)
@@ -46,15 +47,51 @@ class Ohm_Mecanum_Simulator(Node):
                     self.exit_simulation()
         self._surface.fill(bg_color)
 
+        # Draw obstacles
+        for obstacle in self._line_segment_obstacles:
+            pixel_segment_start = self.transform_to_pixelcoords(obstacle[0])
+            pixel_segment_end = self.transform_to_pixelcoords(obstacle[1])
+            pygame.draw.line(self._surface, pygame.Color(0, 0, 0), pixel_segment_start, pixel_segment_end, 3)
+
+        # Convert robot coordinates for displaying all entities in pixel coordinates
+        for r in self._robots:
+
+            r.acquire_lock()
+            # Draw robot symbol
+            coords      = r.get_coords()
+            pixel_robot = self.transform_to_pixelcoords(coords)
+            rect        = r.get_rect()
+            rect.center = pixel_robot
+            rect.move(pixel_robot)
+            self._surface.blit(r.get_image(), rect)
+
+            pos_sensor = r.get_pos_tof()
+            pos_hitpoint = r.get_far_tof()
+
+            # Determine distances to other robots
+            dist_to_obstacles  = []
+            for obstacle in self._robots:
+                if(obstacle != r):
+                    obstacle_coords = obstacle.get_coords()
+                    dist_to_obstacles = r.get_distance_to_circular_obstacle(obstacle_coords, obstacle.get_obstacle_radius(),  dist_to_obstacles)
+
+                    # Draw circular radius of obstacle
+                    if(self._verbose):
+                        pixel_obstacle = self.transform_to_pixelcoords(obstacle_coords)
+                        obstacle_rect = obstacle.get_rect()
+                        obstacle_rect.center = pixel_obstacle
+                        obstacle_rect.move(pixel_obstacle)
+                        pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
+
+            # Determine distances to line segments
+            for obstacle in self._line_segment_obstacles:
+                dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
+
+            #r.publish_tof(dist_to_obstacles)
+
+            r.release_lock()
+
         pygame.display.update()
-
-    def __del__(self):
-        pass
-
-    def service_callback_spawn(self, req):
-        self.spawn_robot(req.x, req.y, req.theta, req.name)
-        response = SpawnResponse(req.x, req.y, req.theta, req.name)
-        return response
     
     def spawn_robot(self, x, y, theta, name):
         self._robots.append(Robot(x, y, theta, name))

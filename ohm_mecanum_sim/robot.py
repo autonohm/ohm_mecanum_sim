@@ -5,18 +5,19 @@
 # ------------------------------------------------------------------------
 
 import os
+from glob import glob
 import pygame
-import rospy
+import rclpy
 import time, threading
 import operator
 import numpy as np
 from math import cos, sin, pi, sqrt
-from geometry_msgs.msg import PoseStamped, Twist
-from sensor_msgs.msg import Joy
-from std_msgs.msg import Float32MultiArray
-from sensor_msgs.msg import LaserScan
-from nav_msgs.msg import Odometry
-from ohm_mecanum_sim.msg import WheelSpeed
+#from geometry_msgs.msg import PoseStamped, Twist
+#from sensor_msgs.msg import Joy
+#from std_msgs.msg import Float32MultiArray
+#from sensor_msgs.msg import LaserScan
+#from nav_msgs.msg import Odometry
+#from ohm_mecanum_sim.msg import WheelSpeed
 
 class Robot:
 
@@ -116,9 +117,9 @@ class Robot:
             self._far_tof.append((0,0))
 
         self._name              = name
-        img_path                = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_1.png")
-        img_path2               = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_2.png")
-        img_path_crash          = os.path.join(os.path.dirname(__file__), "../images/mecanum_crash_2.png")
+        img_path                = os.path.join(os.path.dirname(__file__), "../../../../share/ohm_mecanum_sim/images/mecanum_ohm_1.png")
+        img_path2               = os.path.join(os.path.dirname(__file__), "../../../../share/ohm_mecanum_sim/images/mecanum_ohm_2.png")
+        img_path_crash          = os.path.join(os.path.dirname(__file__), "../../../../share/ohm_mecanum_sim/images/mecanum_crash_2.png")
         self._symbol            = pygame.image.load(img_path)
         self._symbol2           = pygame.image.load(img_path2)
         self._symbol_crash      = pygame.image.load(img_path_crash)
@@ -127,18 +128,19 @@ class Robot:
         self._img_crash         = pygame.transform.rotozoom(self._symbol_crash, self._theta, self._zoomfactor)
         self._robotrect         = self._img.get_rect()
         self._robotrect.center  = self._coords
-        self._sub_twist         = rospy.Subscriber(str(self._name)+"/cmd_vel", Twist, self.callback_twist)
-        self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
-        self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
-        self._pub_pose          = rospy.Publisher(str(self._name)+"/pose", PoseStamped, queue_size=1)
-        self._pub_odom          = rospy.Publisher(str(self._name)+"/odom", Odometry, queue_size=1)
-        self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
-        self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
+        # self._sub_twist         = rospy.Subscriber(str(self._name)+"/cmd_vel", Twist, self.callback_twist)
+        # self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
+        # self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
+        # self._pub_pose          = rospy.Publisher(str(self._name)+"/pose", PoseStamped, queue_size=1)
+        # self._pub_odom          = rospy.Publisher(str(self._name)+"/odom", Odometry, queue_size=1)
+        # self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
+        # self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
 
         self._run               = True
         self._thread            = threading.Timer(0.1, self.trigger)
         self._thread.start()
-        self._timestamp         = rospy.Time.now()#time.process_time()
+        #self._timestamp         = rospy.Time.now()#time.process_time()
+        self._timestamp         = time.process_time()
         self._last_command      = self._timestamp
 
     def __del__(self):
@@ -176,13 +178,14 @@ class Robot:
             self.acquire_lock()
 
             # Measure elapsed time
-            timestamp = rospy.Time.now()#time.process_time()
-            elapsed = (timestamp - self._timestamp).to_sec()
+            #timestamp = rospy.Time.now()#time.process_time()
+            timestamp = time.process_time()
+            elapsed = (timestamp - self._timestamp)
             self._timestamp = timestamp
 
             # Check, whether commands arrived recently
             last_command_arrival = timestamp - self._last_command
-            if last_command_arrival.to_sec() > 0.5:
+            if last_command_arrival > 0.5:
                 self._v[0] = 0
                 self._v[1] = 0
                 self._omega = 0
@@ -201,30 +204,30 @@ class Robot:
             self._coords[0] += v[0]  * elapsed
             self._coords[1] += v[1]  * elapsed
 
-            # Publish pose
-            p = PoseStamped()
-            p.header.frame_id = "pose"
-            p.header.stamp = self._timestamp
-            p.pose.position.x = self._coords[0]
-            p.pose.position.y = self._coords[1]
-            p.pose.position.z = 0
-            p.pose.orientation.w = cos(self._theta/2.0)
-            p.pose.orientation.x = 0
-            p.pose.orientation.y = 0
-            p.pose.orientation.z = sin(self._theta/2.0)
-            self._pub_pose.publish(p)
+            # # Publish pose
+            # p = PoseStamped()
+            # p.header.frame_id = "pose"
+            # p.header.stamp = self._timestamp
+            # p.pose.position.x = self._coords[0]
+            # p.pose.position.y = self._coords[1]
+            # p.pose.position.z = 0
+            # p.pose.orientation.w = cos(self._theta/2.0)
+            # p.pose.orientation.x = 0
+            # p.pose.orientation.y = 0
+            # p.pose.orientation.z = sin(self._theta/2.0)
+            # self._pub_pose.publish(p)
 
-            # Publish odometry
-            o = Odometry()
-            o.header.frame_id ="odom"
-            o.header.stamp = self._timestamp
-            o.pose.pose.position = p.pose.position
-            o.pose.pose.orientation = p.pose.orientation
-            o.child_frame_id = "base_link"
-            o.twist.twist.linear.x = v[0];
-            o.twist.twist.linear.y = v[1];
-            o.twist.twist.angular.z = self._omega;
-            self._pub_odom.publish(o)
+            # # Publish odometry
+            # o = Odometry()
+            # o.header.frame_id ="odom"
+            # o.header.stamp = self._timestamp
+            # o.pose.pose.position = p.pose.position
+            # o.pose.pose.orientation = p.pose.orientation
+            # o.child_frame_id = "base_link"
+            # o.twist.twist.linear.x = v[0];
+            # o.twist.twist.linear.y = v[1];
+            # o.twist.twist.angular.z = self._omega;
+            # self._pub_odom.publish(o)
 
             if(self._reset):
                 time.sleep(1.0)
@@ -236,25 +239,25 @@ class Robot:
             self.release_lock()
             time.sleep(0.04)
 
-    def publish_tof(self, distances):
-        msg = Float32MultiArray(data=distances)
-        self._pub_tof.publish(msg)
+    # def publish_tof(self, distances):
+    #     msg = Float32MultiArray(data=distances)
+    #     self._pub_tof.publish(msg)
 
-        scan = LaserScan()
-        scan.header.stamp = self._timestamp
-        scan.header.frame_id = "laser"
-        scan.angle_min = self._angle_min
-        scan.angle_max = self._angle_max
-        scan.angle_increment = self._angle_inc
-        scan.time_increment = 1.0/50.0
-        scan.range_min = 0.0
-        scan.range_max = self._rng_tof
-        scan.ranges = []
-        scan.intensities = []
-        for i in range(0, self._laserbeams):
-            scan.ranges.append(distances[i])
-            scan.intensities.append(1)
-        self._pub_laser.publish(scan)
+    #     scan = LaserScan()
+    #     scan.header.stamp = self._timestamp
+    #     scan.header.frame_id = "laser"
+    #     scan.angle_min = self._angle_min
+    #     scan.angle_max = self._angle_max
+    #     scan.angle_increment = self._angle_inc
+    #     scan.time_increment = 1.0/50.0
+    #     scan.range_min = 0.0
+    #     scan.range_max = self._rng_tof
+    #     scan.ranges = []
+    #     scan.intensities = []
+    #     for i in range(0, self._laserbeams):
+    #         scan.ranges.append(distances[i])
+    #         scan.intensities.append(1)
+    #     self._pub_laser.publish(scan)
 
     def get_coords(self):
         return self._coords
