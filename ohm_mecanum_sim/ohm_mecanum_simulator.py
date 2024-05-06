@@ -11,6 +11,7 @@ import sys
 
 import rclpy
 from rclpy.node import Node
+from rclpy.clock import Clock
 
 from ohm_mecanum_sim.robot import Robot
 
@@ -23,6 +24,7 @@ class Ohm_Mecanum_Simulator(Node):
         self._robots = []
         self._line_segment_obstacles = []
         self._verbose = False
+        _default_callback_group = Node.default_callback_group
         timer_period = 0.05
         pygame.display.set_caption(windowtitle)
 
@@ -87,14 +89,32 @@ class Ohm_Mecanum_Simulator(Node):
             for obstacle in self._line_segment_obstacles:
                 dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
 
-            #r.publish_tof(dist_to_obstacles)
+            r.publish_tof(dist_to_obstacles)
 
             r.release_lock()
+
+            min_dist = 9999
+            for i in range(0, len(dist_to_obstacles)):
+                if(dist_to_obstacles[i]<min_dist and dist_to_obstacles[i]>0):
+                    min_dist = dist_to_obstacles[i];
+            if(min_dist<(0.2+r._offset_tof)):
+                r.reset_pose()
+            elif (r._coords[0] < 0 or r._coords[1] < 0 or r._coords[0] > self._surface.get_width()/self._meter_to_pixel or r._coords[1] > self._surface.get_height()/self._meter_to_pixel):
+                r.reset_pose()
+
+            # Draw ToF beams
+            pos_hitpoint = r.get_hit_tof(dist_to_obstacles)
+            for i in range(0,r.get_tof_count()):
+                pixel_sensor = self.transform_to_pixelcoords(pos_sensor[i])
+                pixel_hitpoint = self.transform_to_pixelcoords(pos_hitpoint[i])
+                pygame.draw.line(self._surface, pygame.Color(255, 0, 0), pixel_sensor, pixel_hitpoint)  
 
         pygame.display.update()
     
     def spawn_robot(self, x, y, theta, name):
-        self._robots.append(Robot(x, y, theta, name))
+        robot = Robot(x, y, theta, name, self._default_callback_group)
+        self._robots.append(robot)
+        return robot
 
     def kill_robot(self, name):
         for r in self._robots:
