@@ -16,10 +16,11 @@ import operator
 import numpy as np
 from math import cos, sin, pi, sqrt
 from std_msgs.msg import Float32MultiArray
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, TransformStamped
 from sensor_msgs.msg import Joy
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
+from tf2_ros import TransformBroadcaster
 
 class Robot(Node):
 
@@ -138,6 +139,8 @@ class Robot(Node):
         self._pub_tof           = self.create_publisher(Float32MultiArray, str(self._name)+"/tof", 1)
         self._pub_laser         = self.create_publisher(LaserScan, str(self._name)+"/laser", 1)
 
+        self.tf_broadcaster     = TransformBroadcaster(self)
+
         self._run               = True
         self._thread            = threading.Timer(0.1, self.trigger)
         self._thread.start()
@@ -206,7 +209,7 @@ class Robot(Node):
 
             # # Publish pose
             p = PoseStamped()
-            p.header.frame_id = "pose"
+            p.header.frame_id = "map"
             p.header.stamp = self._timestamp.to_msg()
             p.pose.position.x = self._coords[0]
             p.pose.position.y = self._coords[1]
@@ -217,13 +220,28 @@ class Robot(Node):
             p.pose.orientation.z = sin(self._theta/2.0)
             self._pub_pose.publish(p)
 
+            t = TransformStamped()
+            t.header.stamp = self._timestamp.to_msg()
+            t.header.frame_id = 'map'
+            t.child_frame_id = 'base_link'
+            t.transform.translation.x = p.pose.position.x
+            t.transform.translation.y = p.pose.position.y
+            t.transform.translation.z = 0.0
+            t.transform.rotation.x = p.pose.orientation.x
+            t.transform.rotation.y = p.pose.orientation.y
+            t.transform.rotation.z = p.pose.orientation.z
+            t.transform.rotation.w = p.pose.orientation.w
+
+            # Send the transformation
+            self.tf_broadcaster.sendTransform(t)
+
             # Publish odometry
             o = Odometry()
-            o.header.frame_id ="odom"
             o.header.stamp = self._timestamp.to_msg()
+            o.header.frame_id ="map"
+            o.child_frame_id = "base_link"
             o.pose.pose.position = p.pose.position
             o.pose.pose.orientation = p.pose.orientation
-            o.child_frame_id = "base_link"
             o.twist.twist.linear.x = v[0];
             o.twist.twist.linear.y = v[1];
             o.twist.twist.angular.z = self._omega;
@@ -245,7 +263,7 @@ class Robot(Node):
 
         scan = LaserScan()
         scan.header.stamp = self._timestamp.to_msg()
-        scan.header.frame_id = "laser"
+        scan.header.frame_id = "base_link"
         scan.angle_min = self._angle_min
         scan.angle_max = self._angle_max
         scan.angle_increment = self._angle_inc
