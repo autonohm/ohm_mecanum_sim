@@ -50,6 +50,9 @@ class Robot(Node):
     # Number of laser beams
     _laserbeams = 36
 
+    # Gaussian Noise in lidar distance in meters
+    _lasernoise = 0.02
+
     # Facing directions of ToF sensors
     _v_face             = []
 
@@ -114,6 +117,7 @@ class Robot(Node):
         for i in range(0, self._laserbeams):
             self._phi_tof.append(i*self._angle_inc+self._angle_min)
             self._t_tof.append(self._offset_tof)
+
 
         for i in range(0, len(self._phi_tof)):
             self._v_face.append((0,0))
@@ -273,7 +277,7 @@ class Robot(Node):
         scan.ranges = []
         scan.intensities = []
         for i in range(0, self._laserbeams):
-            scan.ranges.append(distances[i])
+            scan.ranges.append(distances[i] + self._lasernoise*np.random.randn())
             scan.intensities.append(1)
         self._pub_laser.publish(scan)
 
