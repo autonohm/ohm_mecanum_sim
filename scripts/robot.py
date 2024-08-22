@@ -3,7 +3,7 @@
 # Date:        20.4.2020
 # Description: Pygame-based robot representation for the mecanum simulator
 # ------------------------------------------------------------------------
-
+import math
 import os
 import pygame
 import rospy
@@ -46,6 +46,12 @@ class Robot:
     # Number of laser beams
     _laserbeams = 271
 
+    #range of laser
+    _laser_range = 8.0
+
+    # Gaussian Noise in lidar distance in meters
+    _lasernoise = 0.02
+    
     # Facing directions of ToF sensors
     _v_face             = []
 
@@ -240,6 +246,35 @@ class Robot:
         msg = Float32MultiArray(data=distances)
         self._pub_tof.publish(msg)
 
+    def LiDAR_sensing(self,robot_pose, map):
+        # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 8m * 100pixel/m = 800 pixel
+        distances = []
+        r_x, r_y, r_heading  = robot_pose[0], robot_pose[1], robot_pose[2]
+        start_angle = -r_heading + self._angle_min
+        end_angle = -r_heading + self._angle_max
+        min_range = self._obstacle_radius + 0.2
+
+        for angle in np.arange(start_angle, end_angle, self._angle_inc):
+            x2, y2 = (r_x + self._laser_range*100*math.cos(angle), r_y + self._laser_range*100*math.sin(angle))
+            x1, y1 = min_range*100*math.cos(angle) + r_x, min_range*100*math.sin(angle) + r_y 
+            for i in range(0, 2000):
+                u = i/2000
+                x = int(x2*u + x1*(1-u))
+                y = int(y2*u + y1*(1-u))
+        
+                if 0 < x < map.get_width() and 0 < y < map.get_height():
+                    
+                    color = map.get_at((x, y))
+                    map.set_at((x, y), (0, 208, 255))
+                    
+                    if (color[0], color[1], color[2]) == (0, 0, 0) or (color[0], color[1], color[2]) == (255, 0, 0):
+                        
+                        obstacle = math.sqrt((x-r_x)**2 + (y-r_y)**2)                                            
+                        distances.append(obstacle/100)
+                        break
+        return distances
+
+    def publish_LiDAR(self, distances):
         scan = LaserScan()
         scan.header.stamp = self._timestamp
         scan.header.frame_id = "laser"
@@ -248,17 +283,25 @@ class Robot:
         scan.angle_increment = self._angle_inc
         scan.time_increment = 1.0/50.0
         scan.range_min = 0.0
-        scan.range_max = self._rng_tof
+        scan.range_max = self._laser_range
         scan.ranges = []
         scan.intensities = []
-        for i in range(0, self._laserbeams):
-            scan.ranges.append(distances[i])
-            scan.intensities.append(1)
+        for i in range(0, len(distances)):
+            # scan.ranges.append(distances[i])
+            if distances[i] < self._laser_range:
+                scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
+                scan.intensities.append(1)
+            else:
+                scan.ranges.append(distances[i] )
+                scan.intensities.append(0)
         self._pub_laser.publish(scan)
-
+         
     def get_coords(self):
         return self._coords
-
+    
+    def get_heading(self):
+        return self._theta
+    
     def get_rect(self):
         self._img       = pygame.transform.rotozoom(self._symbol,       (self._theta-pi/2)*180.0/pi, self._zoomfactor)
         self._img2      = pygame.transform.rotozoom(self._symbol2,      (self._theta-pi/2)*180.0/pi, self._zoomfactor)

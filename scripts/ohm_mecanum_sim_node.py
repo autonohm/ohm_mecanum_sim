@@ -8,25 +8,28 @@
 
 import pygame
 import rospy
+import os
 from ohm_mecanum_simulator import Ohm_Mecanum_Simulator
+
+MAP_NAME = "map.png"
+map_img_path = os.path.join(os.path.dirname(__file__), "../images/" + MAP_NAME)
 
 pygame.init()
 
 # Screen size
-size = width, height = 1600, 900
-
+size = width, height = 900, 900
 # Drawing surface
 surface = pygame.display.set_mode(size, pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-sim = Ohm_Mecanum_Simulator(surface, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
+sim = Ohm_Mecanum_Simulator(surface, map_img_path, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
 
 sim.spawn_robot(2, 2, 0, "robot1")
 # sim.spawn_robot(5, 7, 0, "robot2")
 
-border = 5
-sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
-border = 300
-sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
+# border = 5
+# sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
+# border = 300
+# sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
 
 sim.run()
 rospy.spin()

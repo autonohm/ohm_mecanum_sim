@@ -16,12 +16,13 @@ from std_msgs.msg import String
 
 class Ohm_Mecanum_Simulator:
 
-    def __init__(self, surface, rosname, windowtitle):
+    def __init__(self, surface, map, rosname, windowtitle):
         self._surface = surface
+        self._map = pygame.transform.scale(pygame.image.load(map), self._surface.get_size())
         self._meter_to_pixel = 100
         self._robots = []
         self._line_segment_obstacles = []
-        self._verbose = False
+        self._verbose = True
         rospy.init_node(rosname, anonymous=True)
         pygame.display.set_caption(windowtitle)
     
@@ -91,7 +92,7 @@ class Ohm_Mecanum_Simulator:
         sys.exit()
 
     def run(self):
-        bg_color = (64, 64, 255)
+        # bg_color = (64, 64, 255)
         rospy.Service('/spawn', Spawn, self.service_callback_spawn)
         rospy.Service('/kill', Kill, self.service_callback_kill)
         rospy.Service('/verbose', SetBool, self.service_callback_verbose)
@@ -99,23 +100,29 @@ class Ohm_Mecanum_Simulator:
 
         clock = pygame.time.Clock()
         clock.tick(360)
+        mouse_focused = False
+        
 
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.exit_simulation()
+                # elif pygame.mouse.get_focused():
+                #     mouse_focused = True
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_c and pygame.key.get_mods() & pygame.KMOD_CTRL:
                         self.exit_simulation()
 
-            self._surface.fill(bg_color)
+            # self._surface.fill(bg_color)
             
-            # Draw obstacles
-            for obstacle in self._line_segment_obstacles:
-                pixel_segment_start = self.transform_to_pixelcoords(obstacle[0])
-                pixel_segment_end = self.transform_to_pixelcoords(obstacle[1])
-                pygame.draw.line(self._surface, pygame.Color(0, 0, 0), pixel_segment_start, pixel_segment_end, 3)
-        
+            # Draw obstacles using the map image
+            self._surface.blit(self._map, (0, 0))
+            # Draw obstacles using line segments
+            # for obstacle in self._line_segment_obstacles:
+            #     pixel_segment_start = self.transform_to_pixelcoords(obstacle[0])
+            #     pixel_segment_end = self.transform_to_pixelcoords(obstacle[1])
+            #     pygame.draw.line(self._surface, pygame.Color(0, 0, 0), pixel_segment_start, pixel_segment_end, 3)
+
             # Convert robot coordinates for displaying all entities in pixel coordinates
             for r in self._robots:
 
@@ -127,7 +134,7 @@ class Ohm_Mecanum_Simulator:
                 rect.center = pixel_robot
                 rect.move(pixel_robot)
                 self._surface.blit(r.get_image(), rect)
-
+                robot_pose = pixel_robot[0], pixel_robot[1] , r.get_heading()
                 pos_sensor = r.get_pos_tof()
                 pos_hitpoint = r.get_far_tof()
 
@@ -147,10 +154,13 @@ class Ohm_Mecanum_Simulator:
                             pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
                 
                 # Determine distances to line segments
-                for obstacle in self._line_segment_obstacles:
-                    dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
+                # sensor sensing
+                dist_to_obstacles = r.LiDAR_sensing(robot_pose,self._surface)
+                r.publish_LiDAR(dist_to_obstacles)
+                # for obstacle in self._line_segment_obstacles:
+                #     dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
 
-                r.publish_tof(dist_to_obstacles)
+                # r.publish_tof(dist_to_obstacles)
 
                 r.release_lock()
 
@@ -158,17 +168,18 @@ class Ohm_Mecanum_Simulator:
                 for i in range(0, len(dist_to_obstacles)):
                     if(dist_to_obstacles[i]<min_dist and dist_to_obstacles[i]>0):
                         min_dist = dist_to_obstacles[i];
-                if(min_dist<(0.2+r._offset_tof)):
+                #0.45 + 0.2
+                if(min_dist<(0.66)):
                     r.reset_pose()
                 elif (r._coords[0] < 0 or r._coords[1] < 0 or r._coords[0] > self._surface.get_width()/self._meter_to_pixel or r._coords[1] > self._surface.get_height()/self._meter_to_pixel):
                     r.reset_pose()
 
                 # Draw ToF beams
-                pos_hitpoint = r.get_hit_tof(dist_to_obstacles)
-                for i in range(0,r.get_tof_count()):
-                    pixel_sensor = self.transform_to_pixelcoords(pos_sensor[i])
-                    pixel_hitpoint = self.transform_to_pixelcoords(pos_hitpoint[i])
-                    pygame.draw.line(self._surface, pygame.Color(255, 0, 0), pixel_sensor, pixel_hitpoint)          
+                # pos_hitpoint = r.get_hit_tof(dist_to_obstacles)
+                # for i in range(0,r.get_tof_count()):
+                #     pixel_sensor = self.transform_to_pixelcoords(pos_sensor[i])
+                #     pixel_hitpoint = self.transform_to_pixelcoords(pos_hitpoint[i])
+                #     pygame.draw.line(self._surface, pygame.Color(255, 0, 0), pixel_sensor, pixel_hitpoint)          
 
             pygame.display.update()
 
