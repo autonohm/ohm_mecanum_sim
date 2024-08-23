@@ -48,13 +48,13 @@ class SLAM_Demo:
             if element not in self._map:
                 self._map.append(element)
         # draw the map
-        # self.infomap = self._map_surface.copy()
+        self.infomap = self._map_surface.copy()
         if len(self._map) > 1:
             # print("Drawing map")
             for element in self._map:
                 # print("Drawing element: " + str(element))
-                self._map_surface.set_at((int(element[0]), int(element[1])), self.black)
-            # self._map_surface.blit(self.infomap, (0, 0))
+                self.infomap.set_at((int(element[0]), int(element[1])), self.black)
+            self._map_surface.blit(self.infomap, (0, 0))
 
 
     def callback_pose(self, msg):
@@ -66,7 +66,7 @@ class SLAM_Demo:
         self._laser = msg
         robot_x = self._pose.pose.position.x
         robot_y = self._pose.pose.position.y
-        robot_theta = 2 * math.asin(self._pose.pose.orientation.z)
+        robot_theta = 2 * math.atan2(self._pose.pose.orientation.z, self._pose.pose.orientation.w)
         laser_ranges = msg.ranges
         laser_intensities = msg.intensities
         angle_min = msg.angle_min
@@ -76,7 +76,7 @@ class SLAM_Demo:
         for i, (range, intensity) in enumerate(zip(laser_ranges, laser_intensities)):
             if  intensity >= 0.5:
                 # Calculate the angle of this particular laser beam
-                angle = angle_min + i * angle_increment + robot_theta
+                angle = angle_min + i * angle_increment - robot_theta
                 
                 # Convert from polar to Cartesian coordinates relative to the robot
                 x_rel = range * math.cos(angle)
@@ -84,7 +84,7 @@ class SLAM_Demo:
                 
                 # Rotate and translate to global coordinates
                 x_global = robot_x + x_rel
-                y_global = robot_y + y_rel
+                y_global = robot_y - y_rel
                 
                 # Convert to pixel coordinates (assuming a known scale and map origin)
                 pixel_laser = self.transform_to_pixelcoords([x_global, y_global])
@@ -119,10 +119,11 @@ class SLAM_Demo:
 
             # draw the robot on the map
             current_position = (self._pose.pose.position.x, self._pose.pose.position.y)
-            current_pixel_position = self.transform_to_pixelcoords(current_position)
-            if current_pixel_position is None:
+            # todo: check if the latest pose is received with time stamp
+            if current_position[0] == 0 and current_position[1] == 0:
                 print("No pose received yet")
                 continue
+            current_pixel_position = self.transform_to_pixelcoords(current_position)
             current_heading = 2 * math.atan2(self._pose.pose.orientation.z, self._pose.pose.orientation.w)
             # print("Current position: " + str(current_position))
             # print("Current pixel: " + str(current_pixel_position) + "heading: " + str(current_heading))
@@ -138,7 +139,6 @@ class SLAM_Demo:
                 goal = pygame.mouse.get_pos()
                 # print("Mouse focused: " + str(goal))
 
-
                 self._twist.linear.x = 0
                 self._twist.linear.y = 0
                 self._twist.angular.z = 0
@@ -150,7 +150,7 @@ class SLAM_Demo:
                 print("Current heading: " + str(current_heading))
                 angle_difference = goal_direction + current_heading
                 goal_direction_tuple = [math.cos(goal_direction), math.sin(goal_direction)]
-                # rotate the robot towards the goal
+                # rotate the robot towards the goal direction
                 if abs(angle_difference) > 0.1:
                     if angle_difference > 0:
                         self._twist.linear.x = 0
