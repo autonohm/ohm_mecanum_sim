@@ -123,7 +123,7 @@ class SLAM_Demo:
             if current_pixel_position is None:
                 print("No pose received yet")
                 continue
-            current_heading = 2 * math.asin(self._pose.pose.orientation.z)
+            current_heading = 2 * math.atan2(self._pose.pose.orientation.z, self._pose.pose.orientation.w)
             # print("Current position: " + str(current_position))
             # print("Current pixel: " + str(current_pixel_position) + "heading: " + str(current_heading))
             # draw the robot
