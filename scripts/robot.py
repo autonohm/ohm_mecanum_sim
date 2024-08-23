@@ -38,10 +38,10 @@ class Robot:
     _t_tof              = []
     
     # Minimum angle of laser beams (first beam)
-    _angle_min = -135*pi/180
+    _angle_min = math.radians(-135)
 
     # Angle increment between beams
-    _angle_inc = 1*pi/180
+    _angle_inc = math.radians(1.0)
 
     # Number of laser beams
     _laserbeams = 271
