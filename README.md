@@ -5,6 +5,14 @@ This package comprises a pygame-based robot simulation for mecanum-driven kinema
 
 Tests have been performed with ROS humble
 
+## Setup
+For the here presented simulator you have to install pygame via 
+```
+pip3 install pygame
+```
+other requirements should be set up automatically. 
+
+
 ## Starting the simulator
 Go to your ROS2 workspace / execute the following commands (replace the path to your workspace accordingly):
 ```console
