@@ -10,6 +10,7 @@ import rospy
 import time, threading
 import operator
 import numpy as np
+import tf
 from math import cos, sin, pi, sqrt
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import Joy
@@ -17,6 +18,8 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from ohm_mecanum_sim.msg import WheelSpeed
+from tf.transformations import euler_from_quaternion
+
 
 class Robot:
 
@@ -234,6 +237,14 @@ class Robot:
             o.twist.twist.angular.z = self._omega
             self._pub_odom.publish(o)
 
+            # Publish TF odom to base_link
+            br = tf.TransformBroadcaster()
+            br.sendTransform((self._coords[0], self._coords[1], 0),
+                             tf.transformations.quaternion_from_euler(0, 0, self._theta),
+                             self._timestamp,
+                             "base_link",
+                             "odom")
+            
             if(self._reset):
                 time.sleep(1.0)
                 self._coords[0] = self._initial_coords[0]
@@ -311,11 +322,12 @@ class Robot:
     def publish_LiDAR(self, distances):
         scan = LaserScan()  
         scan.header.stamp = self._timestamp
-        scan.header.frame_id = "laser"
+        scan.header.frame_id = "base_link"
         scan.angle_min = self._angle_min
         scan.angle_max = self._angle_max
         scan.angle_increment = self._angle_inc
-        scan.time_increment = 1.0/50.0
+        scan.time_increment = 1.0/5000.0
+        scan.scan_time = 1.0/500.0
         scan.range_min = 0.0
         scan.range_max = self._laser_range
         scan.ranges = []
