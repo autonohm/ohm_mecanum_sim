@@ -246,6 +246,27 @@ class Robot:
         msg = Float32MultiArray(data=distances)
         self._pub_tof.publish(msg)
 
+    # Bresenham's line algorithm to calculate all points between two points
+    def bresenham_line(self, x0, y0, x1, y1):
+        points = []
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx - dy
+        
+        while True:
+            points.append((x0, y0))
+            if x0 == x1 and y0 == y1:
+                break
+            e2 = err * 2
+            if e2 > -dy:
+                err -= dy
+                x0 += sx
+            if e2 < dx:
+                err += dx
+                y0 += sy
+        return points
     def LiDAR_sensing(self,robot_pose, map):
         # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 8m * 100pixel/m = 800 pixel
         distances = []
@@ -255,27 +276,39 @@ class Robot:
         min_range = self._obstacle_radius + 0.2
 
         for angle in np.arange(start_angle, end_angle, self._angle_inc):
-            x2, y2 = (r_x + self._laser_range*100*math.cos(angle), r_y + self._laser_range*100*math.sin(angle))
-            x1, y1 = min_range*100*math.cos(angle) + r_x, min_range*100*math.sin(angle) + r_y 
-            for i in range(0, 2000):
-                u = i/2000
-                x = int(x2*u + x1*(1-u))
-                y = int(y2*u + y1*(1-u))
-        
-                if 0 < x < map.get_width() and 0 < y < map.get_height():
-                    
-                    color = map.get_at((x, y))
-                    map.set_at((x, y), (0, 208, 255))
-                    
-                    if (color[0], color[1], color[2]) == (0, 0, 0) or (color[0], color[1], color[2]) == (255, 0, 0):
-                        
-                        obstacle = math.sqrt((x-r_x)**2 + (y-r_y)**2)                                            
-                        distances.append(obstacle/100)
-                        break
-        return distances
+            # Calculate laser end point (max range of laser)
+            x2 = int(r_x + self._laser_range * 100 * math.cos(angle))
+            y2 = int(r_y + self._laser_range * 100 * math.sin(angle))
+            
+            # Calculate minimum range start point
+            x1 = int(min_range * 100 * math.cos(angle) + r_x)
+            y1 = int(min_range * 100 * math.sin(angle) + r_y)
+            
+            # Get all points along the laser beam using Bresenham's line algorithm
+            points_on_line = self.bresenham_line(x1, y1, x2, y2)
 
+            # Iterate over the points and check for obstacles
+            for x, y in points_on_line:
+                if 0 < x < map.get_width() and 0 < y < map.get_height():
+                    color = map.get_at((x, y))
+                    
+                    # If an obstacle (black or red), calculate distance and break
+                    if (color[0], color[1], color[2]) == (0, 0, 0) or (color[0], color[1], color[2]) == (255, 0, 0):
+                        obstacle = math.sqrt((x - r_x) ** 2 + (y - r_y) ** 2)
+                        distances.append(obstacle / 100)  # Convert pixels to meters
+                        break
+                    # If no obstacle, append maximum range to distances list
+                    if(x == x2 and y == y2):
+                        distances.append(self._laser_range)  # If end point, append maximum range to distances list
+                    # Optionally, mark the laser path (for visualization)
+                    map.set_at((x, y), (0, 208, 255))
+                else:
+                    distances.append(self._laser_range)  # If out of map, append maximum range to distances list
+        # print size of distances debug for beams, size should be 270
+        # print(len(distances))
+        return distances
     def publish_LiDAR(self, distances):
-        scan = LaserScan()
+        scan = LaserScan()  
         scan.header.stamp = self._timestamp
         scan.header.frame_id = "laser"
         scan.angle_min = self._angle_min
@@ -290,6 +323,7 @@ class Robot:
             # scan.ranges.append(distances[i])
             if distances[i] < self._laser_range:
                 scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
+                # scan.ranges.append(distances[i])
                 scan.intensities.append(1)
             else:
                 scan.ranges.append(distances[i] )
