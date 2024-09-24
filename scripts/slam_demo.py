@@ -20,7 +20,7 @@ class SLAM_Demo:
         self._map_window_name = windowtitle
         self._map_window_size = (900, 900)
         self._meter_to_pixel = 100
-        img_path                = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_1.png")
+        img_path                = os.path.join(os.path.dirname(__file__), "../images/kobuki.png")
         self._symbol            = pygame.image.load(img_path)
 
         pygame.display.set_caption(self._map_window_name)
@@ -128,7 +128,7 @@ class SLAM_Demo:
             # print("Current position: " + str(current_position))
             # print("Current pixel: " + str(current_pixel_position) + "heading: " + str(current_heading))
             # draw the robot
-            robot_img = pygame.transform.rotozoom(self._symbol,(current_heading-pi/2)*180.0/pi, 1.0)
+            robot_img = pygame.transform.rotozoom(self._symbol,(current_heading-pi/2)*180.0/pi, 0.06)
             robot_rect = robot_img.get_rect()
             robot_rect.center = current_pixel_position
             # robot_rect.move(current_pixel_position) 

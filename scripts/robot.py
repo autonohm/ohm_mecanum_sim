@@ -27,7 +27,7 @@ class Robot:
     _omega              = 0
 
     # Radius of circular obstacle region
-    _obstacle_radius = 0.45
+    _obstacle_radius = 0.2
 
     # Angle of facing direction
     #_phi_tof            = [0, pi, pi/2, -pi/2, pi/8, -pi/8, pi+pi/8, pi-pi/8]
@@ -82,6 +82,8 @@ class Robot:
     # Zoomfactor of image representation
     _zoomfactor         = 1.0
 
+    _zoomfactor_kobuki  = 0.06
+
     # Animation counter, this variable is used to switch image representation to pretend a driving robot
     _animation_cnt      = 0
 
@@ -122,14 +124,14 @@ class Robot:
             self._far_tof.append((0,0))
 
         self._name              = name
-        img_path                = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_1.png")
-        img_path2               = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_2.png")
-        img_path_crash          = os.path.join(os.path.dirname(__file__), "../images/mecanum_crash_2.png")
+        img_path                = os.path.join(os.path.dirname(__file__), "../images/kobuki.png")
+        img_path2               = os.path.join(os.path.dirname(__file__), "../images/kobuki.png")
+        img_path_crash          = os.path.join(os.path.dirname(__file__), "../images/mecanum_crash.png")
         self._symbol            = pygame.image.load(img_path)
         self._symbol2           = pygame.image.load(img_path2)
         self._symbol_crash      = pygame.image.load(img_path_crash)
-        self._img               = pygame.transform.rotozoom(self._symbol, self._theta, self._zoomfactor)
-        self._img2              = pygame.transform.rotozoom(self._symbol2, self._theta, self._zoomfactor)
+        self._img               = pygame.transform.rotozoom(self._symbol, self._theta, self._zoomfactor_kobuki)
+        self._img2              = pygame.transform.rotozoom(self._symbol2, self._theta, self._zoomfactor_kobuki)
         self._img_crash         = pygame.transform.rotozoom(self._symbol_crash, self._theta, self._zoomfactor)
         self._robotrect         = self._img.get_rect()
         self._robotrect.center  = self._coords
@@ -197,8 +199,8 @@ class Robot:
             self._theta += self._omega * elapsed
 
             # Transform velocity vectors to global frame
-            cos_theta = cos(self._theta)
-            sin_theta = sin(self._theta)
+            cos_theta = math.cos(self._theta)
+            sin_theta = math.sin(self._theta)
             v =   [self._v[0], self._v[1]]
             v[0] = cos_theta*self._v[0] - sin_theta * self._v[1]
             v[1] = sin_theta*self._v[0] + cos_theta * self._v[1]
@@ -209,15 +211,15 @@ class Robot:
 
             # Publish pose
             p = PoseStamped()
-            p.header.frame_id = "pose"
+            p.header.frame_id = "map"
             p.header.stamp = self._timestamp
             p.pose.position.x = self._coords[0]
             p.pose.position.y = self._coords[1]
             p.pose.position.z = 0
-            p.pose.orientation.w = cos(self._theta/2.0)
+            p.pose.orientation.w = math.cos(self._theta/2.0)
             p.pose.orientation.x = 0
             p.pose.orientation.y = 0
-            p.pose.orientation.z = sin(self._theta/2.0)
+            p.pose.orientation.z = math.sin(self._theta/2.0)
             self._pub_pose.publish(p)
 
             # Publish odometry
@@ -227,9 +229,9 @@ class Robot:
             o.pose.pose.position = p.pose.position
             o.pose.pose.orientation = p.pose.orientation
             o.child_frame_id = "base_link"
-            o.twist.twist.linear.x = v[0];
-            o.twist.twist.linear.y = v[1];
-            o.twist.twist.angular.z = self._omega;
+            o.twist.twist.linear.x = v[0]
+            o.twist.twist.linear.y = v[1]
+            o.twist.twist.angular.z = self._omega
             self._pub_odom.publish(o)
 
             if(self._reset):
@@ -273,8 +275,7 @@ class Robot:
         r_x, r_y, r_heading  = robot_pose[0], robot_pose[1], robot_pose[2]
         start_angle = -r_heading + self._angle_min
         end_angle = -r_heading + self._angle_max
-        min_range = self._obstacle_radius + 0.2
-
+        min_range = self._obstacle_radius
         for angle in np.arange(start_angle, end_angle, self._angle_inc):
             # Calculate laser end point (max range of laser)
             x2 = int(r_x + self._laser_range * 100 * math.cos(angle))
@@ -322,8 +323,8 @@ class Robot:
         for i in range(0, len(distances)):
             # scan.ranges.append(distances[i])
             if distances[i] < self._laser_range:
-                scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
-                # scan.ranges.append(distances[i])
+                # scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
+                scan.ranges.append(distances[i])
                 scan.intensities.append(1)
             else:
                 scan.ranges.append(distances[i] )
@@ -337,8 +338,8 @@ class Robot:
         return self._theta
     
     def get_rect(self):
-        self._img       = pygame.transform.rotozoom(self._symbol,       (self._theta-pi/2)*180.0/pi, self._zoomfactor)
-        self._img2      = pygame.transform.rotozoom(self._symbol2,      (self._theta-pi/2)*180.0/pi, self._zoomfactor)
+        self._img       = pygame.transform.rotozoom(self._symbol,       (self._theta-pi/2)*180.0/pi, self._zoomfactor_kobuki)
+        self._img2      = pygame.transform.rotozoom(self._symbol2,      (self._theta-pi/2)*180.0/pi, self._zoomfactor_kobuki)
         self._img_crash = pygame.transform.rotozoom(self._symbol_crash, (self._theta-pi/2)*180.0/pi, self._zoomfactor)
         self._robotrect = self._img.get_rect()
         return self._robotrect

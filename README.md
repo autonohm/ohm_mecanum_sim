@@ -5,13 +5,11 @@ This package comprises a pygame-based robot simulation for mecanum-driven kinema
 <img src="./images/demo_slam.png"  width="200" height="200">
 
 ## Ubuntu 20.04
-
 ```
 sudo apt install python3-pip
 pip install pygame
 
 ```
-
 ## Ubuntu 18.04
 Tests have been performed with ROS melodic, albeit the used python versions differ. While ROS melodic uses python2.x, the simulator need python3. The  reason is, that ROS noetic will require python3. In order to make the simulator work with ROS melodic, you can follow the installation hints below.
 ### Prerequisites on Ubuntu 18.04
