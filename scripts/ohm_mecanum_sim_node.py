@@ -3,6 +3,7 @@
 # ------------------------------------------------------------
 # Author:      Stefan May
 # Date:        20.4.2020
+# Updated:     24.09.2024 by Dong Wang
 # Description: Pygame-based robot simulator application
 # ------------------------------------------------------------
 
@@ -11,7 +12,7 @@ import rospy
 import os
 from ohm_mecanum_simulator import Ohm_Mecanum_Simulator
 
-MAP_NAME = "map.png"
+MAP_NAME = "mrcn_map.png"
 map_img_path = os.path.join(os.path.dirname(__file__), "../images/" + MAP_NAME)
 
 pygame.init()
@@ -22,10 +23,10 @@ size = width, height = 900, 900
 surface = pygame.display.set_mode(size, pygame.HWSURFACE | pygame.DOUBLEBUF)
 
 sim = Ohm_Mecanum_Simulator(surface, map_img_path, "ohm_mecanum_sim", "Ohm Mecanum Simulator")
-
+# the intial position of the robot should be offset in the odometry publisher
 sim.spawn_robot(2, 2, 0, "robot1")
-# sim.spawn_robot(5, 7, 0, "robot2")
 
+# sim.spawn_robot(5, 7, 0, "robot2")
 # border = 5
 # sim.add_rectangle_pixelcoords([border, border], [width-border, height-border])
 # border = 300

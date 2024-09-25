@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------------
 # Author:      Stefan May
 # Date:        20.4.2020
+# Updated:     24.09.2024 by Dong Wang
 # Description: Pygame-based robot representation for the mecanum simulator
 # ------------------------------------------------------------------------
 import math
@@ -216,8 +217,10 @@ class Robot:
             p = PoseStamped()
             p.header.frame_id = "map"
             p.header.stamp = self._timestamp
-            p.pose.position.x = self._coords[0]
-            p.pose.position.y = self._coords[1]
+            # hard coded offset of 2m in x and y direction to match the intial position of the robot
+            # todo: make this configurable
+            p.pose.position.x = self._coords[0] - 2
+            p.pose.position.y = self._coords[1] - 2
             p.pose.position.z = 0
             p.pose.orientation.w = math.cos(self._theta/2.0)
             p.pose.orientation.x = 0
@@ -235,11 +238,18 @@ class Robot:
             o.twist.twist.linear.x = v[0]
             o.twist.twist.linear.y = v[1]
             o.twist.twist.angular.z = self._omega
+            # Add covariance
+            o.pose.covariance = [0.01, 0, 0, 0, 0, 0,
+                                0, 0.01, 0, 0, 0, 0,
+                                0, 0, 0.01, 0, 0, 0,
+                                0, 0, 0, 0.01, 0, 0,
+                                0, 0, 0, 0, 0.01, 0,
+                                0, 0, 0, 0, 0, 0.01]
             self._pub_odom.publish(o)
 
             # Publish TF odom to base_link
             br = tf.TransformBroadcaster()
-            br.sendTransform((self._coords[0], self._coords[1], 0),
+            br.sendTransform((self._coords[0] - 2, self._coords[1] -2, 0),
                              tf.transformations.quaternion_from_euler(0, 0, self._theta),
                              self._timestamp,
                              "base_link",
@@ -281,13 +291,14 @@ class Robot:
                 y0 += sy
         return points
     def LiDAR_sensing(self,robot_pose, map):
-        # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 8m * 100pixel/m = 800 pixel
+        # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 9m * 100pixel/m = 900 pixel
         distances = []
         r_x, r_y, r_heading  = robot_pose[0], robot_pose[1], robot_pose[2]
         start_angle = -r_heading + self._angle_min
         end_angle = -r_heading + self._angle_max
         min_range = self._obstacle_radius
-        for angle in np.arange(start_angle, end_angle, self._angle_inc):
+        # laser beams are inverted, so we need to iterate from end_angle to start_angle
+        for angle in np.arange(end_angle, start_angle, - self._angle_inc):
             # Calculate laser end point (max range of laser)
             x2 = int(r_x + self._laser_range * 100 * math.cos(angle))
             y2 = int(r_y + self._laser_range * 100 * math.sin(angle))
@@ -322,7 +333,7 @@ class Robot:
     def publish_LiDAR(self, distances):
         scan = LaserScan()  
         scan.header.stamp = self._timestamp
-        scan.header.frame_id = "base_link"
+        scan.header.frame_id = "/laser"
         scan.angle_min = self._angle_min
         scan.angle_max = self._angle_max
         scan.angle_increment = self._angle_inc

@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------------
+# Author:      Dong Wang
+# Date:        24.09.2024
+# Description: SLAM demo for the mecanum simulator
+# ------------------------------------------------------------------------
 import os
 import sys
 import pygame
