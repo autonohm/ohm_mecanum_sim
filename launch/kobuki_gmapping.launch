@@ -36,12 +36,9 @@
     <param name="lasamplestep" value="0.005"/>
     <remap from="scan" to="/robot1/laser" />
   </node>
-  <!-- Start the Kobuki base -->
-  <!-- <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
 
-  <!-- Start the RPLIDAR node -->
-  <!-- <include file="$(find rplidar_ros)/launch/rplidar.launch" /> -->
-  
-    <!-- Start the keyop node -->
-  <!-- <include file="$(find kobuki_keyop)/launch/keyop.launch" /> -->
+  <!--Statrt RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ohm_mecanum_sim)/rviz/mapping.rviz" />
+  <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0 0 0 0 0 0 /base_link /laser 100" />
+
 </launch>

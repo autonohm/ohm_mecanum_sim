@@ -20,8 +20,7 @@
     <rosparam file="$(find ohm_mecanum_sim)/param/base_local_planner_params.yaml" command="load" />
 
     <rosparam file="$(find ohm_mecanum_sim)/param/move_base_params.yaml" command="load" />
-    <!-- <rosparam file="$(find ohm_mecanum_sim)/params/navfn_global_planner_params.yaml" command="load" /> -->
-    <!-- external params file that could be loaded into the move_base namespace -->
+
     <!-- reset frame_id parameters using user input data -->
     <param name="global_costmap/global_frame" value="$(arg global_frame_id)"/>
     <param name="global_costmap/robot_base_frame" value="$(arg base_frame_id)"/>
@@ -46,18 +45,14 @@
     <remap from="scan" to="/robot1/laser" />
   </node>
   
-  
   <!-- Start Map server -->
-  <arg name="map_file" default="$(find ohm_mecanum_sim)/maps/demo_map.yaml"/>
+  <arg name="map_file" default="$(find ohm_mecanum_sim)/maps/mrcn_map.yaml"/>
   <node pkg="map_server" type="map_server" name="map_server" args= "$(arg map_file)" />  
   
-  <!-- Start the Kobuki base -->
-  <!-- <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
+  <!--Statrt RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ohm_mecanum_sim)/rviz/navigation.rviz" />
 
-  <!-- Start the RPLIDAR node -->
-  <!-- <include file="$(find rplidar_ros)/launch/rplidar.launch" /> -->
-  
-  <!-- <include file="$(find kobuki_keyop)/launch/keyop.launch" /> -->
-  
+  <!-- static transform from base to laser-->
+  <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0 0 0 0 0 0 /base_link /laser 100" />
 
 </launch>
