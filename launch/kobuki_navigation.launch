@@ -1,0 +1,58 @@
+<launch>
+  <!-- Start the move_base node -->
+
+  
+    <arg name="odom_frame_id"   default="odom"/>
+    <arg name="base_frame_id"   default="base_link"/>
+    <arg name="global_frame_id" default="map"/>
+    <arg name="odom_topic" default="/robot1/odom" />
+    <arg name="laser_topic" default="/robot1/laser" />
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen" clear_params="true">
+
+    <!-- costmap -->
+    <rosparam file="$(find ohm_mecanum_sim)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find ohm_mecanum_sim)/param/costmap_common_params.yaml"  command="load" ns="local_costmap" />   
+    <rosparam file="$(find ohm_mecanum_sim)/param/local_costmap_params.yaml" command="load" />   
+    <rosparam file="$(find ohm_mecanum_sim)/param/global_costmap_params.yaml" command="load" />
+    <!-- local planner -->
+    <rosparam file="$(find ohm_mecanum_sim)/param/dwa_local_planner_params.yaml" command="load" />
+    <!-- global planner -->
+    <rosparam file="$(find ohm_mecanum_sim)/param/base_local_planner_params.yaml" command="load" />
+
+    <rosparam file="$(find ohm_mecanum_sim)/param/move_base_params.yaml" command="load" />
+
+    <!-- reset frame_id parameters using user input data -->
+    <param name="global_costmap/global_frame" value="$(arg global_frame_id)"/>
+    <param name="global_costmap/robot_base_frame" value="$(arg base_frame_id)"/>
+    <param name="local_costmap/global_frame" value="$(arg odom_frame_id)"/>
+    <param name="local_costmap/robot_base_frame" value="$(arg base_frame_id)"/>
+    <param name="DWAPlannerROS/global_frame_id" value="$(arg odom_frame_id)"/>
+
+    <remap from="cmd_vel" to="/robot1/cmd_vel"/>
+    <remap from="odom" to="$(arg odom_topic)"/>
+    <remap from="scan" to="$(arg laser_topic)"/>
+
+  </node>
+
+  <!-- Start AMCL for localization -->
+  <node pkg="amcl" type="amcl" name="amcl" output="screen">
+    <param name="odom_frame_id" value="odom"/>
+    <param name="base_frame_id" value="base_link"/>
+    <param name="global_frame_id" value="map"/>
+    <param name="global_costmap/map_topic" value="map"/>
+    <param name="update_min_d" value="0.2"/>
+    <param name="update_min_a" value="0.2"/>
+    <remap from="scan" to="/robot1/laser" />
+  </node>
+  
+  <!-- Start Map server -->
+  <arg name="map_file" default="$(find ohm_mecanum_sim)/maps/mrcn_map.yaml"/>
+  <node pkg="map_server" type="map_server" name="map_server" args= "$(arg map_file)" />  
+  
+  <!--Statrt RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ohm_mecanum_sim)/rviz/navigation.rviz" />
+
+  <!-- static transform from base to laser-->
+  <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0 0 0 0 0 0 /base_link /laser 100" />
+
+</launch>

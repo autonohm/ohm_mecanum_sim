@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------------
 # Author:      Stefan May
 # Date:        20.4.2020
+# Updated:     24.09.2024 by Dong Wang
 # Description: Pygame-based robot representation for the mecanum simulator
 # ------------------------------------------------------------------------
 import math
@@ -10,6 +11,7 @@ import rospy
 import time, threading
 import operator
 import numpy as np
+import tf
 from math import cos, sin, pi, sqrt
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import Joy
@@ -17,6 +19,8 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from ohm_mecanum_sim.msg import WheelSpeed
+from tf.transformations import euler_from_quaternion
+
 
 class Robot:
 
@@ -27,7 +31,7 @@ class Robot:
     _omega              = 0
 
     # Radius of circular obstacle region
-    _obstacle_radius = 0.45
+    _obstacle_radius = 0.2
 
     # Angle of facing direction
     #_phi_tof            = [0, pi, pi/2, -pi/2, pi/8, -pi/8, pi+pi/8, pi-pi/8]
@@ -82,6 +86,8 @@ class Robot:
     # Zoomfactor of image representation
     _zoomfactor         = 1.0
 
+    _zoomfactor_kobuki  = 0.06
+
     # Animation counter, this variable is used to switch image representation to pretend a driving robot
     _animation_cnt      = 0
 
@@ -122,14 +128,14 @@ class Robot:
             self._far_tof.append((0,0))
 
         self._name              = name
-        img_path                = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_1.png")
-        img_path2               = os.path.join(os.path.dirname(__file__), "../images/mecanum_ohm_2.png")
-        img_path_crash          = os.path.join(os.path.dirname(__file__), "../images/mecanum_crash_2.png")
+        img_path                = os.path.join(os.path.dirname(__file__), "../images/kobuki.png")
+        img_path2               = os.path.join(os.path.dirname(__file__), "../images/kobuki.png")
+        img_path_crash          = os.path.join(os.path.dirname(__file__), "../images/mecanum_crash.png")
         self._symbol            = pygame.image.load(img_path)
         self._symbol2           = pygame.image.load(img_path2)
         self._symbol_crash      = pygame.image.load(img_path_crash)
-        self._img               = pygame.transform.rotozoom(self._symbol, self._theta, self._zoomfactor)
-        self._img2              = pygame.transform.rotozoom(self._symbol2, self._theta, self._zoomfactor)
+        self._img               = pygame.transform.rotozoom(self._symbol, self._theta, self._zoomfactor_kobuki)
+        self._img2              = pygame.transform.rotozoom(self._symbol2, self._theta, self._zoomfactor_kobuki)
         self._img_crash         = pygame.transform.rotozoom(self._symbol_crash, self._theta, self._zoomfactor)
         self._robotrect         = self._img.get_rect()
         self._robotrect.center  = self._coords
@@ -197,8 +203,8 @@ class Robot:
             self._theta += self._omega * elapsed
 
             # Transform velocity vectors to global frame
-            cos_theta = cos(self._theta)
-            sin_theta = sin(self._theta)
+            cos_theta = math.cos(self._theta)
+            sin_theta = math.sin(self._theta)
             v =   [self._v[0], self._v[1]]
             v[0] = cos_theta*self._v[0] - sin_theta * self._v[1]
             v[1] = sin_theta*self._v[0] + cos_theta * self._v[1]
@@ -209,15 +215,17 @@ class Robot:
 
             # Publish pose
             p = PoseStamped()
-            p.header.frame_id = "pose"
+            p.header.frame_id = "map"
             p.header.stamp = self._timestamp
-            p.pose.position.x = self._coords[0]
-            p.pose.position.y = self._coords[1]
+            # hard coded offset of 2m in x and y direction to match the intial position of the robot
+            # todo: make this configurable
+            p.pose.position.x = self._coords[0] - 2
+            p.pose.position.y = self._coords[1] - 2
             p.pose.position.z = 0
-            p.pose.orientation.w = cos(self._theta/2.0)
+            p.pose.orientation.w = math.cos(self._theta/2.0)
             p.pose.orientation.x = 0
             p.pose.orientation.y = 0
-            p.pose.orientation.z = sin(self._theta/2.0)
+            p.pose.orientation.z = math.sin(self._theta/2.0)
             self._pub_pose.publish(p)
 
             # Publish odometry
@@ -227,11 +235,26 @@ class Robot:
             o.pose.pose.position = p.pose.position
             o.pose.pose.orientation = p.pose.orientation
             o.child_frame_id = "base_link"
-            o.twist.twist.linear.x = v[0];
-            o.twist.twist.linear.y = v[1];
-            o.twist.twist.angular.z = self._omega;
+            o.twist.twist.linear.x = v[0]
+            o.twist.twist.linear.y = v[1]
+            o.twist.twist.angular.z = self._omega
+            # Add covariance
+            o.pose.covariance = [0.01, 0, 0, 0, 0, 0,
+                                0, 0.01, 0, 0, 0, 0,
+                                0, 0, 0.01, 0, 0, 0,
+                                0, 0, 0, 0.01, 0, 0,
+                                0, 0, 0, 0, 0.01, 0,
+                                0, 0, 0, 0, 0, 0.01]
             self._pub_odom.publish(o)
 
+            # Publish TF odom to base_link
+            br = tf.TransformBroadcaster()
+            br.sendTransform((self._coords[0] - 2, self._coords[1] -2, 0),
+                             tf.transformations.quaternion_from_euler(0, 0, self._theta),
+                             self._timestamp,
+                             "base_link",
+                             "odom")
+            
             if(self._reset):
                 time.sleep(1.0)
                 self._coords[0] = self._initial_coords[0]
@@ -246,42 +269,76 @@ class Robot:
         msg = Float32MultiArray(data=distances)
         self._pub_tof.publish(msg)
 
+    # Bresenham's line algorithm to calculate all points between two points
+    def bresenham_line(self, x0, y0, x1, y1):
+        points = []
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx - dy
+        
+        while True:
+            points.append((x0, y0))
+            if x0 == x1 and y0 == y1:
+                break
+            e2 = err * 2
+            if e2 > -dy:
+                err -= dy
+                x0 += sx
+            if e2 < dx:
+                err += dx
+                y0 += sy
+        return points
     def LiDAR_sensing(self,robot_pose, map):
-        # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 8m * 100pixel/m = 800 pixel
+        # robot pose it expressed by pixel_robot and heading, meter_to_pixel = 100, so the range of laser is 9m * 100pixel/m = 900 pixel
         distances = []
         r_x, r_y, r_heading  = robot_pose[0], robot_pose[1], robot_pose[2]
         start_angle = -r_heading + self._angle_min
         end_angle = -r_heading + self._angle_max
-        min_range = self._obstacle_radius + 0.2
+        min_range = self._obstacle_radius
+        # laser beams are inverted, so we need to iterate from end_angle to start_angle
+        for angle in np.arange(end_angle, start_angle, - self._angle_inc):
+            # Calculate laser end point (max range of laser)
+            x2 = int(r_x + self._laser_range * 100 * math.cos(angle))
+            y2 = int(r_y + self._laser_range * 100 * math.sin(angle))
+            
+            # Calculate minimum range start point
+            x1 = int(min_range * 100 * math.cos(angle) + r_x)
+            y1 = int(min_range * 100 * math.sin(angle) + r_y)
+            
+            # Get all points along the laser beam using Bresenham's line algorithm
+            points_on_line = self.bresenham_line(x1, y1, x2, y2)
 
-        for angle in np.arange(start_angle, end_angle, self._angle_inc):
-            x2, y2 = (r_x + self._laser_range*100*math.cos(angle), r_y + self._laser_range*100*math.sin(angle))
-            x1, y1 = min_range*100*math.cos(angle) + r_x, min_range*100*math.sin(angle) + r_y 
-            for i in range(0, 2000):
-                u = i/2000
-                x = int(x2*u + x1*(1-u))
-                y = int(y2*u + y1*(1-u))
-        
+            # Iterate over the points and check for obstacles
+            for x, y in points_on_line:
                 if 0 < x < map.get_width() and 0 < y < map.get_height():
-                    
                     color = map.get_at((x, y))
-                    map.set_at((x, y), (0, 208, 255))
                     
+                    # If an obstacle (black or red), calculate distance and break
                     if (color[0], color[1], color[2]) == (0, 0, 0) or (color[0], color[1], color[2]) == (255, 0, 0):
-                        
-                        obstacle = math.sqrt((x-r_x)**2 + (y-r_y)**2)                                            
-                        distances.append(obstacle/100)
+                        obstacle = math.sqrt((x - r_x) ** 2 + (y - r_y) ** 2)
+                        distances.append(obstacle / 100)  # Convert pixels to meters
                         break
+                    # If no obstacle, append maximum range to distances list
+                    if(x == x2 and y == y2):
+                        distances.append(self._laser_range)  # If end point, append maximum range to distances list
+                    # Optionally, mark the laser path (for visualization)
+                    map.set_at((x, y), (0, 208, 255))
+                else:
+                    distances.append(self._laser_range)  # If out of map, append maximum range to distances list
+        # print size of distances debug for beams, size should be 270
+        # print(len(distances))
         return distances
-
     def publish_LiDAR(self, distances):
-        scan = LaserScan()
+        scan = LaserScan()  
         scan.header.stamp = self._timestamp
-        scan.header.frame_id = "laser"
+        scan.header.frame_id = "/laser"
         scan.angle_min = self._angle_min
         scan.angle_max = self._angle_max
         scan.angle_increment = self._angle_inc
-        scan.time_increment = 1.0/50.0
+        scan.time_increment = 1.0/5000.0
+        scan.scan_time = 1.0/500.0
         scan.range_min = 0.0
         scan.range_max = self._laser_range
         scan.ranges = []
@@ -289,7 +346,8 @@ class Robot:
         for i in range(0, len(distances)):
             # scan.ranges.append(distances[i])
             if distances[i] < self._laser_range:
-                scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
+                # scan.ranges.append(distances[i]+ self._lasernoise*np.random.randn())
+                scan.ranges.append(distances[i])
                 scan.intensities.append(1)
             else:
                 scan.ranges.append(distances[i] )
@@ -303,8 +361,8 @@ class Robot:
         return self._theta
     
     def get_rect(self):
-        self._img       = pygame.transform.rotozoom(self._symbol,       (self._theta-pi/2)*180.0/pi, self._zoomfactor)
-        self._img2      = pygame.transform.rotozoom(self._symbol2,      (self._theta-pi/2)*180.0/pi, self._zoomfactor)
+        self._img       = pygame.transform.rotozoom(self._symbol,       (self._theta-pi/2)*180.0/pi, self._zoomfactor_kobuki)
+        self._img2      = pygame.transform.rotozoom(self._symbol2,      (self._theta-pi/2)*180.0/pi, self._zoomfactor_kobuki)
         self._img_crash = pygame.transform.rotozoom(self._symbol_crash, (self._theta-pi/2)*180.0/pi, self._zoomfactor)
         self._robotrect = self._img.get_rect()
         return self._robotrect

@@ -3,6 +3,7 @@
 # ------------------------------------------------------------
 # Author:      Stefan May
 # Date:        20.4.2020
+# Updated:     24.09.2024 by Dong Wang
 # Description: Pygame-based robot simulator with ROS interface
 # ------------------------------------------------------------
 
@@ -129,47 +130,47 @@ class Ohm_Mecanum_Simulator:
                 r.acquire_lock()
                 # Draw robot symbol
                 coords      = r.get_coords()
+                # hard coded offset of 2m in x and y direction to match the intial position of the robot
+                # map_coords  = [coords[0] -2, coords[1] -2]
                 pixel_robot = self.transform_to_pixelcoords(coords)
                 rect        = r.get_rect()
                 rect.center = pixel_robot
                 rect.move(pixel_robot)
                 self._surface.blit(r.get_image(), rect)
-                robot_pose = pixel_robot[0], pixel_robot[1] , r.get_heading()
-                pos_sensor = r.get_pos_tof()
-                pos_hitpoint = r.get_far_tof()
+                pixel_robot_pose = pixel_robot[0], pixel_robot[1] , r.get_heading()
+                # pos_sensor = r.get_pos_tof()
+                # pos_hitpoint = r.get_far_tof()
 
                 # Determine distances to other robots
                 dist_to_obstacles  = []
-                for obstacle in self._robots:
-                    if(obstacle != r):
-                        obstacle_coords = obstacle.get_coords()
-                        dist_to_obstacles = r.get_distance_to_circular_obstacle(obstacle_coords, obstacle.get_obstacle_radius(),  dist_to_obstacles)
+                # we don't need to check the distance to the robot itself
+                # for obstacle in self._robots:
+                #     if(obstacle != r):
+                #         obstacle_coords = obstacle.get_coords()
+                #         dist_to_obstacles = r.get_distance_to_circular_obstacle(obstacle_coords, obstacle.get_obstacle_radius(),  dist_to_obstacles)
 
-                        # Draw circular radius of obstacle
-                        if(self._verbose):
-                            pixel_obstacle = self.transform_to_pixelcoords(obstacle_coords)
-                            obstacle_rect = obstacle.get_rect()
-                            obstacle_rect.center = pixel_obstacle
-                            obstacle_rect.move(pixel_obstacle)
-                            pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
+                #         # Draw circular radius of obstacle
+                #         if(self._verbose):
+                #             pixel_obstacle = self.transform_to_pixelcoords(obstacle_coords)
+                #             obstacle_rect = obstacle.get_rect()
+                #             obstacle_rect.center = pixel_obstacle
+                #             obstacle_rect.move(pixel_obstacle)
+                #             pygame.draw.circle(self._surface, (255, 0, 0), (int(pixel_obstacle[0]), int(pixel_obstacle[1])), int(obstacle.get_obstacle_radius()*self._meter_to_pixel), 1)
                 
-                # Determine distances to line segments
                 # sensor sensing
-                dist_to_obstacles = r.LiDAR_sensing(robot_pose,self._surface)
+                dist_to_obstacles = r.LiDAR_sensing(pixel_robot_pose,self._surface)
                 r.publish_LiDAR(dist_to_obstacles)
                 # for obstacle in self._line_segment_obstacles:
                 #     dist_to_obstacles = r.get_distance_to_line_obstacle(obstacle[0], obstacle[1], dist_to_obstacles)
-
                 # r.publish_tof(dist_to_obstacles)
-
                 r.release_lock()
 
                 min_dist = 9999
                 for i in range(0, len(dist_to_obstacles)):
                     if(dist_to_obstacles[i]<min_dist and dist_to_obstacles[i]>0):
-                        min_dist = dist_to_obstacles[i];
-                #0.45 + 0.2
-                if(min_dist<(0.66)):
+                        min_dist = dist_to_obstacles[i]
+                #0.2 + 0.02 to avoid collision
+                if(min_dist<(0.22)):
                     r.reset_pose()
                 elif (r._coords[0] < 0 or r._coords[1] < 0 or r._coords[0] > self._surface.get_width()/self._meter_to_pixel or r._coords[1] > self._surface.get_height()/self._meter_to_pixel):
                     r.reset_pose()
