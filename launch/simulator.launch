@@ -1,0 +1,8 @@
+
+<launch>
+
+    <node name="ohm_robot_simulator" pkg="ohm_mecanum_sim" type="ohm_mecanum_sim_node.py" output="screen">
+        
+       
+    </node>
+</launch>
