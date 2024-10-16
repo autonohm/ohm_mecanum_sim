@@ -65,10 +65,10 @@ A window should pop up that displays the environment, the robot and ray-traced l
 
 | Name | In/Out  | Type  |
 |---|---|---|
-| /robot1/cmd_vel       | In    | geometry_msgs/Twist           | 
-| /robot1/laser         | Out   | Sensor_msgs/LaserScan         | 
-| /robot1/odom          | Out   | nav_msgs/Odometry             | 
-| /robot1/wheel_speed   | Out   | ohm_mecanum_sim/WheelSpeed    | 
+| /kobuki/cmd_vel       | In    | geometry_msgs/Twist           | 
+| /kobuki/laser         | Out   | Sensor_msgs/LaserScan         | 
+| /kobuki/odom          | Out   | nav_msgs/Odometry             | 
+| /kobuki/wheel_speed   | Out   | ohm_mecanum_sim/WheelSpeed    | 
 
 # Controlling the robot and using sensor data
 
