@@ -2,6 +2,7 @@
 # Author:      Stefan May
 # Date:        20.4.2020
 # Updated:     24.09.2024 by Dong Wang
+# Updated:     16.10.2024 by Marco Masannek
 # Description: Pygame-based robot representation for the mecanum simulator
 # ------------------------------------------------------------------------
 import math
@@ -21,6 +22,7 @@ from nav_msgs.msg import Odometry
 from ohm_mecanum_sim.msg import WheelSpeed
 from tf.transformations import euler_from_quaternion
 
+use_mrc_config = True
 
 class Robot:
 
@@ -140,12 +142,17 @@ class Robot:
         self._robotrect         = self._img.get_rect()
         self._robotrect.center  = self._coords
         self._sub_twist         = rospy.Subscriber(str(self._name)+"/cmd_vel", Twist, self.callback_twist)
-        self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
         self._sub_wheelspeed    = rospy.Subscriber(str(self._name)+"/wheel_speed", WheelSpeed, self.callback_wheel_speed)
-        self._pub_pose          = rospy.Publisher(str(self._name)+"/pose", PoseStamped, queue_size=1)
         self._pub_odom          = rospy.Publisher(str(self._name)+"/odom", Odometry, queue_size=1)
-        self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
-        self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
+
+
+        if use_mrc_config:
+            self._pub_laser         = rospy.Publisher(str(self._name)+"/laser", LaserScan, queue_size=1)
+        
+        else:
+          self._sub_joy           = rospy.Subscriber(str(self._name)+"/joy", Joy, self.callback_joy)
+          self._pub_pose          = rospy.Publisher(str(self._name)+"/pose", PoseStamped, queue_size=1)
+          self._pub_tof           = rospy.Publisher(str(self._name)+"/tof", Float32MultiArray, queue_size=1)
 
         self._run               = True
         self._thread            = threading.Timer(0.1, self.trigger)
@@ -226,7 +233,9 @@ class Robot:
             p.pose.orientation.x = 0
             p.pose.orientation.y = 0
             p.pose.orientation.z = math.sin(self._theta/2.0)
-            self._pub_pose.publish(p)
+            
+            if not use_mrc_config:
+              self._pub_pose.publish(p)
 
             # Publish odometry
             o = Odometry()
